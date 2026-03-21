@@ -42,18 +42,30 @@ BC1Block BC1Block::encode(const std::array<RGBA_8, 16>& values) {
 		float t = dot / lenSq;
 		t = std::clamp(t, 0.0f, 1.0f);
 		uint8_t quarter = static_cast<uint8_t>(t * 3.0f + 0.5f);
-
-		block.indices |= quarter << (i * 2);
+		switch (quarter) {
+			case 0:
+				block.indices |= 0 << (i * 2);
+				break;
+			case 1:
+				block.indices |= 2 << (i * 2);
+				break;
+			case 2:
+				block.indices |= 3 << (i * 2);
+				break;
+			case 3:
+				block.indices |= 1 << (i * 2);
+				break;
+		}
 	}
 	return block;
 }
 std::array<RGBA_8, 16> BC1Block::decode(const BC1Block& block) {
 	std::array<RGBA_8, 4> values;
 	values[0] = static_cast<RGBA_8>(block.endpoints[0]);
-	values[3] = static_cast<RGBA_8>(block.endpoints[1]);
+	values[1] = static_cast<RGBA_8>(block.endpoints[1]);
 
-	values[1] = (values[0] / 3 + values[3] / 3 * 2);
-	values[2] = (values[0] / 3 * 2 + values[3] / 3);
+	values[2] = (values[0] / 3 + values[3] / 3 * 2);
+	values[3] = (values[0] / 3 * 2 + values[3] / 3);
 
 	std::array<RGBA_8, 16> res;
 
