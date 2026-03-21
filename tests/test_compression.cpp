@@ -10,19 +10,20 @@
 
 int main() {
 	int x, y, c;
-	void* data = stbi_load("test.jpg", &x, &y, &c, 4);
+	void* data = stbi_load("test.png", &x, &y, &c, 4);
 
-	uint32_t size =
-		texture_compressor::query_size(x, y, texture_compressor::Format::BC1);
+	uint32_t size = texture_compressor::query_size(
+		x, y, texture_compressor::Format::BC1_ALPHA
+	);
 
 	void* output = malloc(size);
 
 	texture_compressor::compress(
-		x, y, texture_compressor::Format::BC1, data, output
+		x, y, texture_compressor::Format::BC1_ALPHA, data, output
 	);
 
 	texture_compressor::decompress(
-		x, y, texture_compressor::Format::BC1, output, data
+		x, y, texture_compressor::Format::BC1_ALPHA, output, data
 	);
 
 	stbi_write_png("final.png", x, y, 4, data, x * 4);

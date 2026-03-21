@@ -27,7 +27,14 @@ bool texture_compressor::compress(
 
 			values[i] = texture[texelIndex];
 		}
-		compressedTexture[b] = BC1Block::encode(values);
+		switch (format) {
+			case Format::BC1:
+				compressedTexture[b] = BC1Block::encode(values, false);
+				break;
+			case Format::BC1_ALPHA:
+				compressedTexture[b] = BC1Block::encode(values, true);
+				break;
+		}
 	}
 
 	return true;

@@ -14,7 +14,15 @@ bool texture_compressor::decompress(
 		int blocksPerRow = width / 4;
 		int x = (b % blocksPerRow) * 4;
 		int y = (b / blocksPerRow) * 4;
-		std::array<RGBA_8, 16> values = BC1Block::decode(inputBuffer[b]);
+		std::array<RGBA_8, 16> values;
+		switch (format) {
+			case Format::BC1:
+				values = BC1Block::decode(inputBuffer[b], false);
+				break;
+			case Format::BC1_ALPHA:
+				values = BC1Block::decode(inputBuffer[b], true);
+				break;
+		}
 
 		for (int i = 0; i < 16; i++) {
 			int texelIndex = x + y * width;

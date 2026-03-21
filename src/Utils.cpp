@@ -6,6 +6,7 @@ uint64_t texture_compressor::query_size(
 ) {
 	switch (format) {
 		case Format::BC1:
+		case Format::BC1_ALPHA:
 			return ((width * height) / 16) * 8;
 		default:
 			return 0;
