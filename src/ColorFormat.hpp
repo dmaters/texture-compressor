@@ -252,6 +252,15 @@ union ColorFormat {
 		}
 	};
 
+	float lengthSquared() const {
+		float length = 0;
+		for (int i = 0; i < sizeof...(Channels); i++) {
+			ChannelType v = (*this)[i];
+			length += static_cast<float>(v * v);
+		}
+		return length;
+	};
+
 	ChannelProxy operator[](int index) {
 		return ChannelProxy { data, static_cast<uint16_t>(index) };
 	}
@@ -261,10 +270,9 @@ union ColorFormat {
 			(
 				[&] {
 					if (Is == index) {
-						constexpr ChannelLayout Layouts[] = { Channels... };
 						value = _getValue<Is>(data);
 					}
-				},
+				}(),
 				...
 			);
 		}(std::make_index_sequence<sizeof...(Channels)> {});

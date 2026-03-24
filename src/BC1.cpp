@@ -2,14 +2,23 @@
 
 #include <algorithm>
 
-std::array<RGB_16F, 2> inline computeEndpoints(
+struct EndpointsData {
+	RGB_16F min;
+	RGB_16F max;
+	bool containsTransparency;
+};
+EndpointsData inline computeEndpoints(
 	const std::array<RGBA_8, 16>& values, bool alphaSupport
 ) {
-	RGBA_8 min(255);
-	RGBA_8 max(0);
+	RGBA_8 min(values[0]);
+	RGBA_8 max(values[0]);
 
-	for (int i = 0; i < 16; i++) {
-		if (alphaSupport && values[i].a < 128) continue;
+	bool containsTransparency = false;
+	for (int i = 1; i < 16; i++) {
+		if (alphaSupport && values[i].a < 128) {
+			containsTransparency = true;
+			continue;
+		}
 
 		min.r = std::min<uint8_t>(values[i].r, min.r);
 		max.r = std::max<uint8_t>(values[i].r, max.r);
@@ -19,54 +28,69 @@ std::array<RGB_16F, 2> inline computeEndpoints(
 		max.b = std::max<uint8_t>(values[i].b, max.b);
 	}
 
-	return { static_cast<RGB_16F>(min), static_cast<RGB_16F>(max) };
+	return {
+		.min = static_cast<RGB_16F>(min),
+		.max = static_cast<RGB_16F>(max),
+		.containsTransparency = containsTransparency,
+	};
 };
 
 BC1Block BC1Block::encode(
 	const std::array<RGBA_8, 16>& values, bool alphaSupport
 ) {
 	BC1Block block;
-	std::array<RGB_16F, 2> endpoints = computeEndpoints(values, alphaSupport);
+	auto [minEndpoint, maxEndpoint, containsTransparency] =
+		computeEndpoints(values, alphaSupport);
 
-	block.endpoints = {
-		static_cast<RGB_565>(endpoints[0]),
-		static_cast<RGB_565>(endpoints[1]),
-	};
+	if (alphaSupport && containsTransparency) {
+		block.endpoints = {
+			static_cast<RGB_565>(minEndpoint),
+			static_cast<RGB_565>(maxEndpoint),
+		};
+	} else {
+		block.endpoints = {
+			static_cast<RGB_565>(maxEndpoint),
+			static_cast<RGB_565>(minEndpoint),
+		};
+	}
 
-	RGB_16F localSpaceDir = endpoints[1] - endpoints[0];
+	RGB_16F midPoint = minEndpoint / 2.0f + maxEndpoint / 2.0f;
+	RGB_16F first3rd = minEndpoint / 3.0f + maxEndpoint / (3.0f * 2.0f);
+	RGB_16F second3rd = minEndpoint / (3.0f * 2.0f) + maxEndpoint / 3.0f;
 
 	for (int i = 0; i < 16; i++) {
-		if (alphaSupport && values[i].a < 128) {
-			block.indices |= 3 << (i * 2);
+		RGB_16F value = static_cast<RGB_16F>(values[i]);
+
+		if (alphaSupport && containsTransparency) {
+			if (values[i].a < 128) {
+				block.indices |= 3 << (i * 2);
+				continue;
+			}
+			std::array<float, 3> distances = {
+				(minEndpoint - value).lengthSquared(),
+				(maxEndpoint - value).lengthSquared(),
+				(midPoint - value).lengthSquared(),
+			};
+
+			uint8_t index =
+				std::min_element(distances.begin(), distances.end()) -
+				distances.begin();
+
+			block.indices |= index << (i * 2);
 			continue;
 		}
 
-		RGB_16F value = static_cast<RGB_16F>(values[i]);
-		RGB_16F offset = value - endpoints[0];
+		std::array<float, 4> distances = {
+			(maxEndpoint - value).lengthSquared(),
+			(minEndpoint - value).lengthSquared(),
+			(first3rd - value).lengthSquared(),
+			(second3rd - value).lengthSquared(),
+		};
 
-		float dot = 0, lenSq = 0;
-		for (int a = 0; a < 3; a++) {
-			dot += offset[a] * localSpaceDir[a];
-			lenSq += localSpaceDir[a] * localSpaceDir[a];
-		}
+		uint8_t index = std::min_element(distances.begin(), distances.end()) -
+		                distances.begin();
 
-		float t = dot / lenSq;
-		t = std::clamp(t, 0.0f, 1.0f);
-		uint8_t quarter = static_cast<uint8_t>(t * 3.0f + 0.5f);
-		switch (quarter) {
-			case 0:
-				block.indices |= 0 << (i * 2);
-				break;
-			case 1:
-				block.indices |= 2 << (i * 2);
-				break;
-			case 2:
-				block.indices |= 3 << (i * 2);
-				break;
-			case 3:
-				block.indices |= 1 << (i * 2);
-				break;
-		}
+		block.indices |= index << (i * 2);
 	}
 	return block;
 }
@@ -76,26 +100,31 @@ std::array<RGBA_8, 16> BC1Block::decode(
 ) {
 	std::array<RGBA_8, 4> values;
 
-	if (alphaSupport) {
-		values[0] = static_cast<RGBA_8>(block.endpoints[0]);
-		values[1] = static_cast<RGBA_8>(block.endpoints[1]);
+	bool containsTransparency = block.endpoints[0].lengthSquared() <=
+	                            block.endpoints[1].lengthSquared();
 
-		values[2] = (values[0] / 2 + values[3] / 2);
+	values[0] = static_cast<RGBA_8>(block.endpoints[0]);
+	values[1] = static_cast<RGBA_8>(block.endpoints[1]);
+
+	if (alphaSupport && containsTransparency) {
+		values[2] = (values[0] / 2 + values[1] / 2);
 		values[3] = RGBA_8(0);
 	} else {
-		values[0] = static_cast<RGBA_8>(block.endpoints[0]);
-		values[1] = static_cast<RGBA_8>(block.endpoints[1]);
-
-		values[2] = (values[0] / 3 + values[3] / 3 * 2);
-		values[3] = (values[0] / 3 * 2 + values[3] / 3);
+		values[2] = (values[0] / 3 + values[1] / 3 * 2);
+		values[3] = (values[0] / 3 * 2 + values[1] / 3);
 	}
 
 	std::array<RGBA_8, 16> res;
 
 	for (int i = 0; i < 16; i++) {
 		uint8_t index = (block.indices >> (i * 2)) & 0b11;
+
 		res[i] = values[index];
-		if (alphaSupport && index == 3) continue;
+
+		if (alphaSupport && containsTransparency && index == 3) {
+			continue;
+		}
+
 		res[i].a = 255;
 	}
 
