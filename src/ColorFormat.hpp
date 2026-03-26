@@ -261,6 +261,21 @@ union ColorFormat {
 		return length;
 	};
 
+	static ColorFormat lerp(ColorFormat c1, ColorFormat c2, ChannelType v) {
+		if constexpr (std::is_integral_v<ChannelType>) {
+			ColorFormat res;
+			for (int i = 0; i < sizeof...(Channels); i++) {
+				res[i] = c1[i] + ((((c2[i] - c1[i]) * v +
+				                    (1 << sizeof(ChannelType) * 8) / 2)) >>
+				                  (sizeof(ChannelType) * 8));
+			}
+
+			return res;
+
+		} else
+			return c1 + ((c2 - c1) * v);
+	}
+
 	ChannelProxy operator[](int index) {
 		return ChannelProxy { data, static_cast<uint16_t>(index) };
 	}
@@ -345,3 +360,4 @@ using RGB_16F = ColorFormat<
 		.bits = 32,
 		.offset = 64,
 	}>;
+using R_8 = ColorFormat<uint8_t[1], uint8_t, { .bits = 8, .offset = 0 }>;

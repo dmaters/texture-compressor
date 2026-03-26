@@ -9,6 +9,7 @@ add_library(texture-compressor
     src/Compression.cpp
     src/Decompression.cpp
     src/BC1.cpp
+    src/BC4.cpp
     src/Utils.cpp
 )
 
