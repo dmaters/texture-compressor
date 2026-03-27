@@ -6,11 +6,11 @@ struct Endpoints {
 };
 
 Endpoints computeEndpoints(const std::array<R_8, 16>& values) {
-	uint8_t min = values[0].r;
-	uint8_t max = values[0].r;
+	uint8_t min = values[0].r();
+	uint8_t max = values[0].r();
 
 	for (int i = 1; i < 16; i++) {
-		uint8_t v = values[i].r;
+		uint8_t v = values[i].r();
 		min = std::min<uint8_t>(min, v);
 		max = std::max<uint8_t>(max, v);
 	}
@@ -34,7 +34,7 @@ BC4Block BC4Block::encode(const std::array<R_8, 16>& values) {
 		uint8_t indexMap[8] = { 1, 7, 6, 5, 4, 3, 2, 0 };
 
 		for (int i = 0; i < 16; i++) {
-			uint8_t v = values[i].r;
+			uint8_t v = values[i].r();
 			uint8_t index = ((v - minEndpoint) * 7 + bias) / range;
 			indices |= static_cast<uint64_t>(indexMap[index]) << (i * 3);
 		}

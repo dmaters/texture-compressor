@@ -3,29 +3,27 @@
 #include <algorithm>
 
 struct EndpointsData {
-	RGB_16F min;
-	RGB_16F max;
+	RGB_8 min;
+	RGB_8 max;
 	bool containsTransparency;
 };
 EndpointsData inline computeEndpoints(
 	const std::array<RGBA_8, 16>& values, bool alphaSupport
 ) {
-	RGBA_8 min(values[0]);
-	RGBA_8 max(values[0]);
+	RGB_8 min(values[0]);
+	RGB_8 max(values[0]);
 
 	bool containsTransparency = false;
 	for (int i = 1; i < 16; i++) {
-		if (alphaSupport && values[i].a < 128) {
+		if (alphaSupport && values[i].a() < 128) {
 			containsTransparency = true;
 			continue;
 		}
 
-		min.r = std::min<uint8_t>(values[i].r, min.r);
-		max.r = std::max<uint8_t>(values[i].r, max.r);
-		min.g = std::min<uint8_t>(values[i].g, min.g);
-		max.g = std::max<uint8_t>(values[i].g, max.g);
-		min.b = std::min<uint8_t>(values[i].b, min.b);
-		max.b = std::max<uint8_t>(values[i].b, max.b);
+		for (int c = 0; c < 3; c++) {
+			min[c] = std::min<uint8_t>(values[i][c], min[c]);
+			max[c] = std::max<uint8_t>(values[i][c], max[c]);
+		}
 	}
 
 	return {
@@ -54,42 +52,35 @@ BC1Block BC1Block::encode(
 		};
 	}
 
-	RGB_16F midPoint = minEndpoint / 2.0f + maxEndpoint / 2.0f;
-	RGB_16F first3rd = minEndpoint / 3.0f + maxEndpoint / (3.0f * 2.0f);
-	RGB_16F second3rd = minEndpoint / (3.0f * 2.0f) + maxEndpoint / 3.0f;
+	RGB_8 dir = maxEndpoint - minEndpoint;
+	float dot = RGB_8::dot<uint32_t>(dir, dir);
 
 	for (int i = 0; i < 16; i++) {
-		RGB_16F value = static_cast<RGB_16F>(values[i]);
+		RGB_8 value = static_cast<RGB_8>(values[i]) - minEndpoint;
+		float vdot = RGB_8::dot<uint32_t>(value, dir);
 
 		if (alphaSupport && containsTransparency) {
-			if (values[i].a < 128) {
+			if (values[i].a() < 128) {
 				block.indices |= 3 << (i * 2);
 				continue;
 			}
-			std::array<float, 3> distances = {
-				(minEndpoint - value).lengthSquared(),
-				(maxEndpoint - value).lengthSquared(),
-				(midPoint - value).lengthSquared(),
-			};
-
-			uint8_t index =
-				std::min_element(distances.begin(), distances.end()) -
-				distances.begin();
+			uint8_t index = 1;
+			if (vdot <= dot / 4)
+				index = 0;
+			else if (vdot <= dot / 4 * 3)
+				index = 2;
 
 			block.indices |= index << (i * 2);
 			continue;
 		}
 
-		std::array<float, 4> distances = {
-			(maxEndpoint - value).lengthSquared(),
-			(minEndpoint - value).lengthSquared(),
-			(first3rd - value).lengthSquared(),
-			(second3rd - value).lengthSquared(),
-		};
-
-		uint8_t index = std::min_element(distances.begin(), distances.end()) -
-		                distances.begin();
-
+		uint8_t index = 0;
+		if (vdot <= dot / 6)
+			index = 1;
+		else if (vdot <= dot / 2)
+			index = 2;
+		else if (vdot <= dot / 6 * 5)
+			index = 3;
 		block.indices |= index << (i * 2);
 	}
 	return block;
@@ -100,11 +91,11 @@ std::array<RGBA_8, 16> BC1Block::decode(
 ) {
 	std::array<RGBA_8, 4> values;
 
-	bool containsTransparency = block.endpoints[0].lengthSquared() <=
-	                            block.endpoints[1].lengthSquared();
-
 	values[0] = static_cast<RGBA_8>(block.endpoints[0]);
 	values[1] = static_cast<RGBA_8>(block.endpoints[1]);
+
+	bool containsTransparency =
+		values[0].lengthSquared() <= values[1].lengthSquared();
 
 	if (alphaSupport && containsTransparency) {
 		values[2] = (values[0] / 2 + values[1] / 2);
@@ -125,7 +116,7 @@ std::array<RGBA_8, 16> BC1Block::decode(
 			continue;
 		}
 
-		res[i].a = 255;
+		res[i][3] = 255;
 	}
 
 	return res;
