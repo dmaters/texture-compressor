@@ -18,15 +18,16 @@ bool texture_compressor::compress(
 		switch (format) {
 			case Format::BC1:
 			case Format::BC1_ALPHA: {
-				std::array<RGBA_8, 16> values;
-				RGBA_8 *texture = static_cast<RGBA_8 *>(data);
+				RGBA8Block values;
+				RGBA8 *texture = static_cast<RGBA8 *>(data);
 				BC1Block *compressedTexture = static_cast<BC1Block *>(output);
 
 				for (int i = 0; i < 16; i++) {
 					int texelIndex = x + y * width;
 					texelIndex += i % 4 + i / 4 * width;
-
-					values[i] = texture[texelIndex];
+					for (int c = 0; c < 4; c++) {
+						values[c][i] = texture[texelIndex][c][0];
+					}
 				}
 				if (format == Format::BC1)
 					compressedTexture[b] = BC1Block::encode(values, false);
@@ -37,15 +38,15 @@ bool texture_compressor::compress(
 			}
 
 			case Format::BC4: {
-				std::array<R_8, 16> values;
-				R_8 *texture = static_cast<R_8 *>(data);
+				R8Block values;
+				R8 *texture = static_cast<R8 *>(data);
 				BC4Block *compressedTexture = static_cast<BC4Block *>(output);
 
 				for (int i = 0; i < 16; i++) {
 					int texelIndex = x + y * width;
 					texelIndex += i % 4 + i / 4 * width;
 
-					values[i] = texture[texelIndex];
+					values[0][i] = texture[texelIndex][0][0];
 				}
 				compressedTexture[b] = BC4Block::encode(values);
 				break;

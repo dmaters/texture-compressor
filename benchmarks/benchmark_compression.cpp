@@ -5,12 +5,12 @@
 #include "texture_compressor/decompression.hpp"
 #include "texture_compressor/utils.hpp"
 
-static const uint WIDTH = 4096, HEIGHT = 4096;
+static const size_t WIDTH = 4096, HEIGHT = 4096;
 
 std::vector<uint8_t> generateImage(uint8_t channelCount) {
 	std::vector<uint8_t> image(WIDTH * HEIGHT * channelCount);
-	uint width = WIDTH / 2;
-	uint height = HEIGHT / 2;
+	size_t width = WIDTH / 2;
+	size_t height = HEIGHT / 2;
 	// Gradient
 	for (int y = 0; y < height; y++) {
 		for (int x = 0; x < width; x++) {

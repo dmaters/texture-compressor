@@ -17,9 +17,9 @@ bool texture_compressor::decompress(
 		switch (format) {
 			case Format::BC1:
 			case Format::BC1_ALPHA: {
-				std::array<RGBA_8, 16> values;
+				std::array<RGBA8, 16> values;
 				BC1Block *inputBuffer = static_cast<BC1Block *>(data);
-				RGBA_8 *outputBuffer = static_cast<RGBA_8 *>(output);
+				RGBA8 *outputBuffer = static_cast<RGBA8 *>(output);
 				if (format == Format::BC1)
 					values = BC1Block::decode(inputBuffer[b], false);
 				else
@@ -33,9 +33,9 @@ bool texture_compressor::decompress(
 				break;
 			}
 			case Format::BC4: {
-				std::array<R_8, 16> values;
+				std::array<R8, 16> values;
 				BC4Block *inputBuffer = static_cast<BC4Block *>(data);
-				R_8 *outputBuffer = static_cast<R_8 *>(output);
+				R8 *outputBuffer = static_cast<R8 *>(output);
 				values = BC4Block::decode(inputBuffer[b]);
 
 				for (int i = 0; i < 16; i++) {
