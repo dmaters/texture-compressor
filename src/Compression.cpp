@@ -2,6 +2,7 @@
 
 #include "BC1.hpp"
 #include "BC4.hpp"
+#include "BC5.hpp"
 
 using namespace texture_compressor;
 
@@ -49,6 +50,20 @@ bool texture_compressor::compress(
 					values[0][i] = texture[texelIndex][0][0];
 				}
 				compressedTexture[b] = BC4Block::encode(values);
+				break;
+			}
+			case Format::BC5: {
+				RG8 *texture = static_cast<RG8 *>(data);
+				BC5Block *compressedTexture = static_cast<BC5Block *>(output);
+				std::array<RG8, 16> values;
+
+				for (int i = 0; i < 16; i++) {
+					int texelIndex = x + y * width;
+					texelIndex += i % 4 + i / 4 * width;
+
+					values[i] = texture[texelIndex];
+				}
+				compressedTexture[b] = BC5Block::encode(values);
 				break;
 			}
 		}

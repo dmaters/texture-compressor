@@ -80,6 +80,9 @@ void benchmarkFormat(texture_compressor::Format format) {
 		case texture_compressor::Format::BC4:
 			channels = 1;
 			break;
+		case texture_compressor::Format::BC5:
+			channels = 2;
+			break;
 	}
 
 	std::vector<uint8_t> baseInput = generateImage(channels);
@@ -136,6 +139,8 @@ int main() {
 	benchmarkFormat(texture_compressor::Format::BC1_ALPHA);
 	printf("\nBC4 Compression :\n");
 	benchmarkFormat(texture_compressor::Format::BC4);
+	printf("\nBC5 Compression :\n");
+	benchmarkFormat(texture_compressor::Format::BC5);
 
 	return 0;
 }

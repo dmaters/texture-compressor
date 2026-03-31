@@ -2,6 +2,8 @@
 
 #include "BC1.hpp"
 #include "BC4.hpp"
+#include "BC5.hpp"
+
 using namespace texture_compressor;
 
 bool texture_compressor::decompress(
@@ -37,6 +39,19 @@ bool texture_compressor::decompress(
 				BC4Block *inputBuffer = static_cast<BC4Block *>(data);
 				R8 *outputBuffer = static_cast<R8 *>(output);
 				values = BC4Block::decode(inputBuffer[b]);
+
+				for (int i = 0; i < 16; i++) {
+					int texelIndex = x + y * width;
+					texelIndex += i % 4 + i / 4 * width;
+					outputBuffer[texelIndex] = values[i];
+				}
+				break;
+			}
+			case Format::BC5: {
+				std::array<RG8, 16> values;
+				BC5Block *inputBuffer = static_cast<BC5Block *>(data);
+				RG8 *outputBuffer = static_cast<RG8 *>(output);
+				values = BC5Block::decode(inputBuffer[b]);
 
 				for (int i = 0; i < 16; i++) {
 					int texelIndex = x + y * width;

@@ -457,5 +457,9 @@ using RGB565 = ColorFormatPacked<
 		.offset = 11,
 	}>;
 using RGB16F = ColorFormat<float, 3, 1>;
+
+using RG8 = ColorFormat<uint8_t, 2, 1>;
+using RG8Block = ColorFormat<uint8_t, 2, 16>;
+
 using R8 = ColorFormat<uint8_t, 1, 1>;
 using R8Block = ColorFormat<uint8_t, 1, 16>;
