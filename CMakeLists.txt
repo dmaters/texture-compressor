@@ -13,18 +13,6 @@ add_library(texture-compressor
     src/Utils.cpp
 )
 
-if(MSVC)
-    target_compile_options(texture-compressor PRIVATE
-        /O2
-        /arch:AVX2
-    )
-else()
-    target_compile_options(texture-compressor PRIVATE
-        -O3
-        -march=native
-    )
-endif()
-
 target_include_directories(
     texture-compressor
     PUBLIC
