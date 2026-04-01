@@ -6,26 +6,18 @@
 
 using namespace texture_compressor;
 
-template <
-	typename DataType,
-	typename BlockType,
-	bool alternativeFormatting = false>
+template <typename DataType, typename BlockType>
 void _decompress(
 	size_t width, size_t height, BlockType *data, std::byte *output
 ) {
 	uint32_t blockCount = width * height / 16;
 
 	for (int b = 0; b < blockCount; b++) {
-		std::array<DataType, 16> values;
-
 		int blocksPerRow = width / 4;
 		int x = (b % blocksPerRow) * 4;
 		int y = (b / blocksPerRow) * 4;
 
-		if constexpr (alternativeFormatting)
-			values = BlockType::decode(data[b], true);
-		else
-			values = BlockType::decode(data[b]);
+		std::array<DataType, 16> values = BlockType::decode(data[b]);
 		int baseIndex = x + y * width;
 
 		for (int i = 0; i < 16; i++) {
@@ -67,7 +59,7 @@ bool texture_compressor::decompress(
 		case Format::BC1_ALPHA: {
 			BC1Block *textureData = static_cast<BC1Block *>(data);
 
-			_decompress<RGBA8, BC1Block, true>(
+			_decompress<RGBA8, BC1Block>(
 				width, height, textureData, outputData
 
 			);

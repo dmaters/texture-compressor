@@ -1,5 +1,7 @@
 #include "texture_compressor/compression.hpp"
 
+#include <cassert>
+
 #include "BC1.hpp"
 #include "BC4.hpp"
 #include "BC5.hpp"
@@ -27,20 +29,18 @@ void _compress(
 			uint32_t texelIndex = baseIndex;
 
 			uint32_t dx = i % 4;
-			texelIndex += x + dx < width ? dx : width % 4;
+			texelIndex += (x + dx) < width ? dx : width % 4 - 1;
 
 			uint32_t dy = i / 4;
-			texelIndex += y + dy < height ? dy * width : (height % 4) * width;
+			texelIndex += (y + dy) < height ? dy * width
+			                                : (height % 4 - 1) * width;
 
 			texelIndex *= DataType::channels();
 			for (int c = 0; c < DataType::channels(); c++) {
 				values[c][i] = static_cast<uint8_t>(data[texelIndex + c]);
 			}
 		}
-		if constexpr (alternativeFormatting)
-			output[b] = BlockType::encode(values, true);
-		else
-			output[b] = BlockType::encode(values);
+		output[b] = BlockType::encode(values);
 	}
 }
 
@@ -50,18 +50,11 @@ bool texture_compressor::compress(
 	std::byte *textureData = static_cast<std::byte *>(data);
 
 	switch (format) {
+		case Format::BC1_ALPHA:
 		case Format::BC1: {
 			BC1Block *outputData = static_cast<BC1Block *>(output);
 			_compress<RGBA8Block, BC1Block>(
 				width, height, textureData, outputData
-			);
-			break;
-		}
-		case Format::BC1_ALPHA: {
-			BC1Block *outputData = static_cast<BC1Block *>(output);
-			_compress<RGBA8Block, BC1Block, true>(
-				width, height, textureData, outputData
-
 			);
 			break;
 		}

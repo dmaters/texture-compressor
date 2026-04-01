@@ -7,17 +7,10 @@
 struct EndpointsData {
 	RGBA8 min;
 	RGBA8 max;
-	bool containsTransparency;
 };
 
-EndpointsData computeEndpoints(const RGBA8Block& values, bool alphaSupport) {
+EndpointsData computeEndpoints(const RGBA8Block& values) {
 	RGBA8 min, max;
-
-	bool containsTransparency = false;
-
-	for (int b = 0; b < 16; b++) {
-		if (alphaSupport && values[3][b] < 128) containsTransparency = true;
-	}
 
 	uint8_t channelMin[4] = { 255, 255, 255, 255 };
 	uint8_t channelMax[4] = { 0, 0, 0, 0 };
@@ -36,17 +29,23 @@ EndpointsData computeEndpoints(const RGBA8Block& values, bool alphaSupport) {
 	return {
 		.min = min,
 		.max = max,
-		.containsTransparency = containsTransparency,
 	};
 };
 
-BC1Block BC1Block::encode(const RGBA8Block& values, bool alphaSupport) {
+BC1Block BC1Block::encode(const RGBA8Block& values) {
 	BC1Block block;
 
-	auto [minEndpoint, maxEndpoint, containsTransparency] =
-		computeEndpoints(values, alphaSupport);
+	auto [minEndpoint, maxEndpoint] = computeEndpoints(values);
 
-	if (alphaSupport && containsTransparency) {
+	bool equalEndpoints =
+		static_cast<RGB8>(static_cast<RGB565>(maxEndpoint - minEndpoint))
+			.lengthSquared<uint32_t>()[0] == 0;
+
+	bool containsTransparency = minEndpoint[3][0] < 128;
+
+	bool alphaMode = equalEndpoints || containsTransparency;
+
+	if (alphaMode) {
 		block.endpoints = {
 			static_cast<RGB565>(minEndpoint),
 			static_cast<RGB565>(maxEndpoint),
@@ -63,7 +62,7 @@ BC1Block BC1Block::encode(const RGBA8Block& values, bool alphaSupport) {
 	RGBA8Block directions = values - minEndpoint;
 	auto vdot = RGBA8Block::dot<uint32_t>(directions, dir);
 
-	if (alphaSupport && containsTransparency) {
+	if (alphaMode) {
 		for (int i = 0; i < 16; i++) {
 			uint8_t index = 1;
 			if (vdot[i] <= dot / 4)
@@ -73,9 +72,11 @@ BC1Block BC1Block::encode(const RGBA8Block& values, bool alphaSupport) {
 
 			block.indices |= index << (i * 2);
 		}
-		for (int i = 0; i < 16; i++) {
-			if (values[3][i] < 128) {
-				block.indices |= 3 << (i * 2);
+		if (containsTransparency) {
+			for (int i = 0; i < 16; i++) {
+				if (values[3][i] < 128) {
+					block.indices |= 3 << (i * 2);
+				}
 			}
 		}
 	} else {
@@ -94,18 +95,16 @@ BC1Block BC1Block::encode(const RGBA8Block& values, bool alphaSupport) {
 	return block;
 }
 
-std::array<RGBA8, 16> BC1Block::decode(
-	const BC1Block& block, bool alphaSupport
-) {
+std::array<RGBA8, 16> BC1Block::decode(const BC1Block& block) {
 	std::array<RGBA8, 4> values;
 
 	values[0] = static_cast<RGBA8>(block.endpoints[0]);
 	values[1] = static_cast<RGBA8>(block.endpoints[1]);
 
-	bool containsTransparency = values[0].lengthSquared<uint32_t>()[0] <=
-	                            values[1].lengthSquared<uint32_t>()[0];
+	bool alphaMode = values[0].lengthSquared<uint32_t>()[0] <=
+	                 values[1].lengthSquared<uint32_t>()[0];
 
-	if (alphaSupport && containsTransparency) {
+	if (alphaMode) {
 		values[2] = (values[0] / 2 + values[1] / 2);
 		values[3] = RGBA8(0);
 	} else {
@@ -120,10 +119,9 @@ std::array<RGBA8, 16> BC1Block::decode(
 
 		res[i] = values[index];
 
-		if (alphaSupport && containsTransparency && index == 3) {
+		if (alphaMode && index == 3) {
 			continue;
 		}
-
 		res[i][3][0] = 255;
 	}
 
