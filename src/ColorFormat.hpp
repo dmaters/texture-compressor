@@ -39,6 +39,9 @@ struct ColorFormat {
 			for (size_t b = 0; b < BlockSize; b++) data[c][b] = value;
 	}
 
+	static constexpr size_t channels() { return ChannelCount; }
+	static constexpr size_t size() { return BlockSize; }
+
 	constexpr std::span<ChannelType> operator[](size_t i) {
 		return std::span<ChannelType>(data[i]);
 	}

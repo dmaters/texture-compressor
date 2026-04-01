@@ -1,11 +1,11 @@
 #include "BC5.hpp"
 
-BC5Block BC5Block::encode(const std::array<RG8, 16>& values) {
+BC5Block BC5Block::encode(const RG8Block& values) {
 	R8Block c1, c2;
 
 	for (int i = 0; i < 16; i++) {
-		c1[0][i] = values[i][0][0];
-		c2[0][i] = values[i][1][0];
+		c1[0][i] = values[0][i];
+		c2[0][i] = values[1][i];
 	}
 
 	BC5Block block;

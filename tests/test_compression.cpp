@@ -11,9 +11,12 @@
 int main() {
 	int x, y, c;
 	void* data = stbi_load("test.png", &x, &y, &c, 4);
+	std::size_t width, height;
+	width = static_cast<std::size_t>(x);
+	height = static_cast<std::size_t>(y);
 
-	uint32_t size = texture_compressor::query_size(
-		x, y, texture_compressor::Format::BC1_ALPHA
+	std::size_t size = texture_compressor::query_size(
+		width, height, texture_compressor::Format::BC1_ALPHA
 	);
 
 	void* output = malloc(size);

@@ -6,66 +6,82 @@
 
 using namespace texture_compressor;
 
-bool texture_compressor::compress(
-	uint16_t width, uint16_t height, Format format, void *data, void *output
+template <
+	typename DataType,
+	typename BlockType,
+	bool alternativeFormatting = false>
+void _compress(
+	size_t width, size_t height, std::byte *data, BlockType *output
 ) {
 	int blockCount = (width * height) / 16;
-
 	int blocksPerRow = width / 4;
+
 	for (int b = 0; b < blockCount; b++) {
 		int x = (b % blocksPerRow) * 4;
 		int y = (b / blocksPerRow) * 4;
 
-		switch (format) {
-			case Format::BC1:
-			case Format::BC1_ALPHA: {
-				RGBA8Block values;
-				RGBA8 *texture = static_cast<RGBA8 *>(data);
-				BC1Block *compressedTexture = static_cast<BC1Block *>(output);
+		DataType values;
+		uint32_t baseIndex = x + y * width;
 
-				for (int i = 0; i < 16; i++) {
-					int texelIndex = x + y * width;
-					texelIndex += i % 4 + i / 4 * width;
-					for (int c = 0; c < 4; c++) {
-						values[c][i] = texture[texelIndex][c][0];
-					}
-				}
-				if (format == Format::BC1)
-					compressedTexture[b] = BC1Block::encode(values, false);
-				else
-					compressedTexture[b] = BC1Block::encode(values, true);
+		for (int i = 0; i < 16; i++) {
+			uint32_t texelIndex = baseIndex;
 
-				break;
+			uint32_t dx = i % 4;
+			texelIndex += x + dx < width ? dx : width % 4;
+
+			uint32_t dy = i / 4;
+			texelIndex += y + dy < height ? dy * width : (height % 4) * width;
+
+			texelIndex *= DataType::channels();
+			for (int c = 0; c < DataType::channels(); c++) {
+				values[c][i] = static_cast<uint8_t>(data[texelIndex + c]);
 			}
+		}
+		if constexpr (alternativeFormatting)
+			output[b] = BlockType::encode(values, true);
+		else
+			output[b] = BlockType::encode(values);
+	}
+}
 
-			case Format::BC4: {
-				R8Block values;
-				R8 *texture = static_cast<R8 *>(data);
-				BC4Block *compressedTexture = static_cast<BC4Block *>(output);
+bool texture_compressor::compress(
+	size_t width, size_t height, Format format, void *data, void *output
+) {
+	std::byte *textureData = static_cast<std::byte *>(data);
 
-				for (int i = 0; i < 16; i++) {
-					int texelIndex = x + y * width;
-					texelIndex += i % 4 + i / 4 * width;
+	switch (format) {
+		case Format::BC1: {
+			BC1Block *outputData = static_cast<BC1Block *>(output);
+			_compress<RGBA8Block, BC1Block>(
+				width, height, textureData, outputData
+			);
+			break;
+		}
+		case Format::BC1_ALPHA: {
+			BC1Block *outputData = static_cast<BC1Block *>(output);
+			_compress<RGBA8Block, BC1Block, true>(
+				width, height, textureData, outputData
 
-					values[0][i] = texture[texelIndex][0][0];
-				}
-				compressedTexture[b] = BC4Block::encode(values);
-				break;
-			}
-			case Format::BC5: {
-				RG8 *texture = static_cast<RG8 *>(data);
-				BC5Block *compressedTexture = static_cast<BC5Block *>(output);
-				std::array<RG8, 16> values;
+			);
+			break;
+		}
 
-				for (int i = 0; i < 16; i++) {
-					int texelIndex = x + y * width;
-					texelIndex += i % 4 + i / 4 * width;
+		case Format::BC4: {
+			BC4Block *outputData = static_cast<BC4Block *>(output);
 
-					values[i] = texture[texelIndex];
-				}
-				compressedTexture[b] = BC5Block::encode(values);
-				break;
-			}
+			_compress<R8Block, BC4Block>(
+				width, height, textureData, outputData
+			);
+
+			break;
+		}
+		case Format::BC5: {
+			BC5Block *outputData = static_cast<BC5Block *>(output);
+
+			_compress<RG8Block, BC5Block>(
+				width, height, textureData, outputData
+			);
+			break;
 		}
 	}
 

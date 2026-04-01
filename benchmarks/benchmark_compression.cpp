@@ -68,7 +68,7 @@ std::vector<uint8_t> generateImage(uint8_t channelCount) {
 }
 
 void benchmarkFormat(texture_compressor::Format format) {
-	uint32_t compressedSize =
+	std::size_t compressedSize =
 		texture_compressor::query_size(WIDTH, HEIGHT, format);
 
 	uint8_t channels = 0;

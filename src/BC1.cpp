@@ -16,7 +16,7 @@ EndpointsData computeEndpoints(const RGBA8Block& values, bool alphaSupport) {
 	bool containsTransparency = false;
 
 	for (int b = 0; b < 16; b++) {
-		if (values[3][b] < 128) containsTransparency = true;
+		if (alphaSupport && values[3][b] < 128) containsTransparency = true;
 	}
 
 	uint8_t channelMin[4] = { 255, 255, 255, 255 };
@@ -73,6 +73,11 @@ BC1Block BC1Block::encode(const RGBA8Block& values, bool alphaSupport) {
 
 			block.indices |= index << (i * 2);
 		}
+		for (int i = 0; i < 16; i++) {
+			if (values[3][i] < 128) {
+				block.indices |= 3 << (i * 2);
+			}
+		}
 	} else {
 		for (int i = 0; i < 16; i++) {
 			uint8_t index = 0;
@@ -86,11 +91,6 @@ BC1Block BC1Block::encode(const RGBA8Block& values, bool alphaSupport) {
 		}
 	}
 
-	for (int i = 0; i < 16; i++) {
-		if (values[3][i] < 128) {
-			block.indices |= 3 << (i * 2);
-		}
-	}
 	return block;
 }
 
