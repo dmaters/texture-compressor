@@ -437,12 +437,16 @@ union ColorFormatPacked {
 	NamedChannelProxy<2> b;
 	NamedChannelProxy<3> a;
 };
+template <size_t BlockSize>
+using RGBA8n = ColorFormat<uint8_t, 4, BlockSize>;
+using RGBA8 = RGBA8n<1>;
+using RGBA8Block = RGBA8n<16>;
 
-using RGBA8 = ColorFormat<uint8_t, 4, 1>;
-using RGBA8Block = ColorFormat<uint8_t, 4, 16>;
+template <size_t BlockSize>
+using RGB8n = ColorFormat<uint8_t, 3, BlockSize>;
 
-using RGB8 = ColorFormat<uint8_t, 3, 1>;
-using RGB8Block = ColorFormat<uint8_t, 3, 16>;
+using RGB8 = RGB8n<1>;
+using RGB8Block = RGB8n<16>;
 
 using RGB565 = ColorFormatPacked<
 	uint16_t,
@@ -459,10 +463,15 @@ using RGB565 = ColorFormatPacked<
 		.bits = 5,
 		.offset = 11,
 	}>;
-using RGB16F = ColorFormat<float, 3, 1>;
 
-using RG8 = ColorFormat<uint8_t, 2, 1>;
-using RG8Block = ColorFormat<uint8_t, 2, 16>;
+template <size_t BlockSize>
+using RG8n = ColorFormat<uint8_t, 2, BlockSize>;
 
-using R8 = ColorFormat<uint8_t, 1, 1>;
-using R8Block = ColorFormat<uint8_t, 1, 16>;
+using RG8 = RG8n<1>;
+using RG8Block = RG8n<16>;
+
+template <size_t BlockSize>
+using R8n = ColorFormat<uint8_t, 1, BlockSize>;
+
+using R8 = R8n<1>;
+using R8Block = R8n<16>;

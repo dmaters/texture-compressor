@@ -8,12 +8,9 @@
 
 using namespace texture_compressor;
 
-template <
-	typename DataType,
-	typename BlockType,
-	bool alternativeFormatting = false>
-void _compress(
-	size_t width, size_t height, std::byte *data, BlockType *output
+template <template <size_t> typename DataType, typename BlockType>
+void _compressMipLevel(
+	size_t width, size_t height, DataType<1> *data, BlockType *output
 ) {
 	int blockCount = (width * height) / 16;
 	int blocksPerRow = width / 4;
@@ -22,7 +19,7 @@ void _compress(
 		int x = (b % blocksPerRow) * 4;
 		int y = (b / blocksPerRow) * 4;
 
-		DataType values;
+		DataType<16> values;
 		uint32_t baseIndex = x + y * width;
 
 		for (int i = 0; i < 16; i++) {
@@ -35,44 +32,98 @@ void _compress(
 			texelIndex += (y + dy) < height ? dy * width
 			                                : (height % 4 - 1) * width;
 
-			texelIndex *= DataType::channels();
-			for (int c = 0; c < DataType::channels(); c++) {
-				values[c][i] = static_cast<uint8_t>(data[texelIndex + c]);
+			for (int c = 0; c < DataType<1>::channels(); c++) {
+				values[c][i] = data[texelIndex][c][0];
 			}
 		}
 		output[b] = BlockType::encode(values);
 	}
 }
 
-bool texture_compressor::compress(
-	size_t width, size_t height, Format format, void *data, void *output
-) {
-	std::byte *textureData = static_cast<std::byte *>(data);
+template <template <size_t> typename DataType>
+void _reduceMipLevel(size_t width, size_t height, DataType<1> *data) {
+	int blockCount = (width * height) / 4;
+	int blocksPerRow = width / 2;
 
+	for (int b = 0; b < blockCount; b++) {
+		int x = (b % blocksPerRow) * 2;
+		int y = (b / blocksPerRow) * 2;
+		DataType<1> endValue(0);
+		uint32_t baseIndex = x + y * width;
+
+		for (int i = 0; i < 4; i++) {
+			uint32_t texelIndex = baseIndex;
+
+			uint32_t dx = i % 2;
+			texelIndex += (x + dx) < width ? dx : width % 2 - 1;
+
+			uint32_t dy = i / 2;
+			texelIndex += (y + dy) < height ? dy * width
+			                                : (height % 2 - 1) * width;
+
+			texelIndex *= DataType<1>::channels();
+			endValue = endValue + (data[texelIndex] / 4);
+			data[baseIndex] = endValue;
+		}
+	}
+}
+
+size_t computeOffset(size_t width, size_t height, size_t mipmap) {
+	if (mipmap > 0)
+		return (width * height / 16) +
+		       computeOffset(width / 2, height / 2, mipmap - 1);
+	else
+		return ((width * height) / 16);
+}
+
+template <template <size_t> typename DataType, typename BlockType>
+void _compress(
+	size_t width,
+	size_t height,
+	DataType<1> *data,
+	BlockType *output,
+	uint8_t mipLevels
+) {
+	_compressMipLevel<DataType, BlockType>(width, height, data, output);  // 0
+
+	for (int m = 1; m < mipLevels; m++) {
+		size_t mipWidth = width / (2 * m);
+		size_t mipHeight = height / (2 * m);
+
+		size_t offset = computeOffset(mipWidth, mipHeight, m - 1);
+		_reduceMipLevel<DataType>(mipWidth, mipHeight, data);
+		_compressMipLevel<DataType, BlockType>(
+			mipWidth, mipHeight, data, output + offset
+		);
+	}
+}
+bool texture_compressor::compress(
+	size_t width,
+	size_t height,
+	Format format,
+	void *data,
+	void *output,
+	uint8_t mipmapLevels
+) {
 	switch (format) {
 		case Format::BC1_ALPHA:
 		case Format::BC1: {
-			BC1Block *outputData = static_cast<BC1Block *>(output);
-			_compress<RGBA8Block, BC1Block>(
-				width, height, textureData, outputData
+			_compress<RGBA8n, BC1Block>(
+				width, height, (RGBA8 *)data, (BC1Block *)output, mipmapLevels
 			);
 			break;
 		}
 
 		case Format::BC4: {
-			BC4Block *outputData = static_cast<BC4Block *>(output);
-
-			_compress<R8Block, BC4Block>(
-				width, height, textureData, outputData
+			_compress<R8n, BC4Block>(
+				width, height, (R8 *)data, (BC4Block *)output, mipmapLevels
 			);
 
 			break;
 		}
 		case Format::BC5: {
-			BC5Block *outputData = static_cast<BC5Block *>(output);
-
-			_compress<RG8Block, BC5Block>(
-				width, height, textureData, outputData
+			_compress<RG8n, BC5Block>(
+				width, height, (RG8 *)data, (BC5Block *)output, mipmapLevels
 			);
 			break;
 		}
