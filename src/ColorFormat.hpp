@@ -453,7 +453,7 @@ using RGB565 = ColorFormatPacked<
 	uint8_t,
 	{
 		.bits = 5,
-		.offset = 0,
+		.offset = 11,
 	},
 	{
 		.bits = 6,
@@ -461,7 +461,7 @@ using RGB565 = ColorFormatPacked<
 	},
 	{
 		.bits = 5,
-		.offset = 11,
+		.offset = 0,
 	}>;
 
 template <size_t BlockSize>
