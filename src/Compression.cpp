@@ -8,9 +8,9 @@
 
 using namespace texture_compressor;
 
-template <template <size_t> typename DataType, typename BlockType>
+template <template <std::size_t> typename DataType, typename BlockType>
 void _compressMipLevel(
-	size_t width, size_t height, DataType<1> *data, BlockType *output
+    std::size_t width, std::size_t height, DataType<1> *data, BlockType *output
 ) {
 	int blockCount = (width * height) / 16;
 	int blocksPerRow = width / 4;
@@ -20,15 +20,15 @@ void _compressMipLevel(
 		int y = (b / blocksPerRow) * 4;
 
 		DataType<16> values;
-		uint32_t baseIndex = x + y * width;
+		std::size_t baseIndex = x + y * width;
 
 		for (int i = 0; i < 16; i++) {
-			uint32_t texelIndex = baseIndex;
+			std::size_t texelIndex = baseIndex;
 
-			uint32_t dx = i % 4;
+			uint8_t dx = i % 4;
 			texelIndex += (x + dx) < width ? dx : width % 4 - 1;
 
-			uint32_t dy = i / 4;
+			uint8_t dy = i / 4;
 			texelIndex += (y + dy) < height ? dy * width
 			                                : (height % 4 - 1) * width;
 
@@ -40,8 +40,8 @@ void _compressMipLevel(
 	}
 }
 
-template <template <size_t> typename DataType>
-void _reduceMipLevel(size_t width, size_t height, DataType<1> *data) {
+template <template <std::size_t> typename DataType>
+void _reduceMipLevel(std::size_t width, std::size_t height, DataType<1> *data) {
 	int blockCount = (width * height) / 4;
 	int blocksPerRow = width / 2;
 
@@ -68,7 +68,7 @@ void _reduceMipLevel(size_t width, size_t height, DataType<1> *data) {
 	}
 }
 
-size_t computeOffset(size_t width, size_t height, size_t mipmap) {
+std::size_t computeOffset(std::size_t width, std::size_t height, std::size_t mipmap) {
 	if (mipmap > 0)
 		return (width * height / 16) +
 		       computeOffset(width / 2, height / 2, mipmap - 1);
@@ -76,10 +76,10 @@ size_t computeOffset(size_t width, size_t height, size_t mipmap) {
 		return ((width * height) / 16);
 }
 
-template <template <size_t> typename DataType, typename BlockType>
+template <template <std::size_t> typename DataType, typename BlockType>
 void _compress(
-	size_t width,
-	size_t height,
+	std::size_t width,
+	std::size_t height,
 	DataType<1> *data,
 	BlockType *output,
 	uint8_t mipLevels
@@ -87,10 +87,10 @@ void _compress(
 	_compressMipLevel<DataType, BlockType>(width, height, data, output);  // 0
 
 	for (int m = 1; m < mipLevels; m++) {
-		size_t mipWidth = width / (2 * m);
-		size_t mipHeight = height / (2 * m);
+		std::size_t mipWidth = width / (2 * m);
+		std::size_t mipHeight = height / (2 * m);
 
-		size_t offset = computeOffset(mipWidth, mipHeight, m - 1);
+		std::size_t offset = computeOffset(mipWidth, mipHeight, m - 1);
 		_reduceMipLevel<DataType>(mipWidth, mipHeight, data);
 		_compressMipLevel<DataType, BlockType>(
 			mipWidth, mipHeight, data, output + offset
@@ -98,9 +98,9 @@ void _compress(
 	}
 }
 bool texture_compressor::compress(
-	size_t width,
-	size_t height,
-	Format format,
+	std::size_t width,
+	std::size_t height,
+	texture_compressor::Format format,
 	void *data,
 	void *output,
 	uint8_t mipmapLevels

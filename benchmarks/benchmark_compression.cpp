@@ -5,16 +5,16 @@
 #include "texture_compressor/decompression.hpp"
 #include "texture_compressor/utils.hpp"
 
-static const size_t WIDTH = 4096, HEIGHT = 4096;
+static const std::size_t WIDTH = 4096, HEIGHT = 4096;
 
 std::vector<uint8_t> generateImage(uint8_t channelCount) {
 	std::vector<uint8_t> image(WIDTH * HEIGHT * channelCount);
-	size_t width = WIDTH / 2;
-	size_t height = HEIGHT / 2;
+	std::size_t width = WIDTH / 2;
+	std::size_t height = HEIGHT / 2;
 	// Gradient
-	for (int y = 0; y < height; y++) {
-		for (int x = 0; x < width; x++) {
-			uint32_t index = x * channelCount + y * WIDTH * channelCount;
+	for (std::size_t y = 0; y < height; y++) {
+		for (std::size_t x = 0; x < width; x++) {
+			std::size_t index = x * channelCount + y * WIDTH * channelCount;
 
 			image[index + 0] =
 				static_cast<uint8_t>(static_cast<float>(x) / width * 255.0f);
@@ -31,9 +31,9 @@ std::vector<uint8_t> generateImage(uint8_t channelCount) {
 		}
 	}
 	// Blocks
-	for (int y = 0; y < height; y++) {
-		for (int x = width; x < width * 2; x++) {
-			uint32_t index = x * channelCount + y * WIDTH * channelCount;
+	for (std::size_t y = 0; y < height; y++) {
+		for (std::size_t x = width; x < width * 2; x++) {
+			std::size_t index = x * channelCount + y * WIDTH * channelCount;
 
 			image[index + 0] = (x / 11 % 2) * 255;
 			if (channelCount > 1) image[index + 1] = (y / 11 % 2) * 255;
@@ -43,9 +43,9 @@ std::vector<uint8_t> generateImage(uint8_t channelCount) {
 	}
 
 	// Random
-	for (int y = height; y < height * 2; y++) {
-		for (int x = 0; x < width; x++) {
-			uint32_t index = x * channelCount + y * WIDTH * channelCount;
+	for (std::size_t y = height; y < height * 2; y++) {
+		for (std::size_t x = 0; x < width; x++) {
+			std::size_t index = x * channelCount + y * WIDTH * channelCount;
 
 			image[index + 0] = rand();
 			if (channelCount > 1) image[index + 1] = rand();
@@ -54,9 +54,9 @@ std::vector<uint8_t> generateImage(uint8_t channelCount) {
 		}
 	}
 	// Set color
-	for (int y = height; y < height * 2; y++) {
-		for (int x = width; x < width * 2; x++) {
-			uint32_t index = x * channelCount + y * WIDTH * channelCount;
+	for (std::size_t y = height; y < height * 2; y++) {
+		for (std::size_t x = width; x < width * 2; x++) {
+			std::size_t index = x * channelCount + y * WIDTH * channelCount;
 
 			image[index + 0] = 128;
 			if (channelCount > 1) image[index + 1] = 128;
@@ -110,7 +110,7 @@ void benchmarkFormat(texture_compressor::Format format) {
 
 	std::printf("Average time : %.2f ms \n", averageDuration);
 
-	size_t size = WIDTH * HEIGHT * channels;
+	std::size_t size = WIDTH * HEIGHT * channels;
 	std::vector<uint8_t> decompressedOutput = std::vector<uint8_t>(size);
 
 	texture_compressor::decompress(

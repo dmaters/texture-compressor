@@ -8,25 +8,25 @@ using namespace texture_compressor;
 
 template <typename DataType, typename BlockType>
 void _decompress(
-	size_t width, size_t height, BlockType *data, std::byte *output
+	std::size_t width, std::size_t height, BlockType *data, std::byte *output
 ) {
-	uint32_t blockCount = width * height / 16;
+		std::size_t blockCount = width * height / 16;
 
 	for (int b = 0; b < blockCount; b++) {
-		int blocksPerRow = width / 4;
-		int x = (b % blocksPerRow) * 4;
-		int y = (b / blocksPerRow) * 4;
+			std::size_t blocksPerRow = width / 4;
+			std::size_t x = (b % blocksPerRow) * 4;
+			std::size_t y = (b / blocksPerRow) * 4;
 
 		std::array<DataType, 16> values = BlockType::decode(data[b]);
-		int baseIndex = x + y * width;
+			std::size_t baseIndex = x + y * width;
 
 		for (int i = 0; i < 16; i++) {
-			int texelIndex = baseIndex;
-			uint32_t dx = i % 4;
-			texelIndex += x + dx < width ? dx : width % 4 - 1;
+			std::size_t texelIndex = baseIndex;
+			uint8_t dx = i % 4;
+			texelIndex += x + dx < width ? dx : (width % 4) - 1;
 
-			uint32_t dy = i / 4;
-			texelIndex += y + dy < height ? dy * width : (height  % 4 - 1) * width;
+			uint8_t dy = i / 4;
+			texelIndex += y + dy < height ? dy * width : (height % 4 - 1) * width;
 
 			texelIndex *= DataType::channels();
 			for (int c = 0; c < DataType::channels(); c++) {

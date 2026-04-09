@@ -23,7 +23,7 @@ template <
 	ChannelLayout... Channels>
 union ColorFormatPacked;
 
-template <typename ChannelType, size_t ChannelCount, size_t BlockSize>
+template <typename ChannelType, std::size_t ChannelCount, std::size_t BlockSize>
 struct ColorFormat {
 	ChannelType data[ChannelCount][BlockSize];
 
@@ -31,22 +31,22 @@ struct ColorFormat {
 		const std::array<ColorFormat<ChannelType, ChannelCount, 1>, BlockSize>&
 			block
 	) {
-		for (size_t c = 0; c < ChannelCount; c++)
-			for (size_t b = 0; b < BlockSize; b++) data[c][b] = block[b][c][0];
+		for (std::size_t c = 0; c < ChannelCount; c++)
+			for (std::size_t b = 0; b < BlockSize; b++) data[c][b] = block[b][c][0];
 	}
 	constexpr ColorFormat(ChannelType value = ChannelType {}) {
-		for (size_t c = 0; c < ChannelCount; c++)
-			for (size_t b = 0; b < BlockSize; b++) data[c][b] = value;
+		for (std::size_t c = 0; c < ChannelCount; c++)
+			for (std::size_t b = 0; b < BlockSize; b++) data[c][b] = value;
 	}
 
 	static constexpr size_t channels() { return ChannelCount; }
 	static constexpr size_t size() { return BlockSize; }
 
-	constexpr std::span<ChannelType> operator[](size_t i) {
+	constexpr std::span<ChannelType> operator[](std::size_t i) {
 		return std::span<ChannelType>(data[i]);
 	}
 
-	constexpr const std::span<const ChannelType> operator[](size_t i) const {
+	constexpr const std::span<const ChannelType> operator[](std::size_t i) const {
 		return std::span<const ChannelType>(data[i]);
 	}
 
@@ -70,7 +70,7 @@ struct ColorFormat {
 			return c1 + ((c2 - c1) * v);
 	}
 
-	template <typename ResultType, size_t OtherBlockSize>
+	template <typename ResultType, std::size_t OtherBlockSize>
 	static constexpr std::array<ResultType, BlockSize> dot(
 		const ColorFormat& c1,
 		const ColorFormat<ChannelType, ChannelCount, OtherBlockSize>& c2
@@ -83,80 +83,80 @@ struct ColorFormat {
 		return res;
 	}
 
-	template <size_t OtherBlockSize>
+	template <std::size_t OtherBlockSize>
 	constexpr ColorFormat operator+(
 		const ColorFormat<ChannelType, ChannelCount, OtherBlockSize>& o
 	) const {
 		ColorFormat res;
-		for (size_t c = 0; c < ChannelCount; c++)
-			for (int b = 0; b < BlockSize; b++)
+		for (std::size_t c = 0; c < ChannelCount; c++)
+			for (std::size_t b = 0; b < BlockSize; b++)
 				res[c][b] = data[c][b] + o[c][OtherBlockSize == 1 ? 0 : b];
 		return res;
 	}
 
-	template <size_t OtherBlockSize>
+	template <std::size_t OtherBlockSize>
 	constexpr ColorFormat operator-(
 		const ColorFormat<ChannelType, ChannelCount, OtherBlockSize>& o
 	) const {
 		ColorFormat res;
-		for (size_t c = 0; c < ChannelCount; c++)
-			for (int b = 0; b < BlockSize; b++)
+		for (std::size_t c = 0; c < ChannelCount; c++)
+			for (std::size_t b = 0; b < BlockSize; b++)
 				res[c][b] = data[c][b] - o[c][OtherBlockSize == 1 ? 0 : b];
 		return res;
 	}
 
-	template <size_t OtherBlockSize>
+	template <std::size_t OtherBlockSize>
 	constexpr ColorFormat operator*(
 		const ColorFormat<ChannelType, ChannelCount, OtherBlockSize>& o
 	) const {
 		ColorFormat res;
-		for (size_t c = 0; c < ChannelCount; c++)
-			for (int b = 0; b < BlockSize; b++)
+		for (std::size_t c = 0; c < ChannelCount; c++)
+			for (std::size_t b = 0; b < BlockSize; b++)
 				res[c][b] = data[c][b] * o[c][OtherBlockSize == 1 ? 0 : b];
 		return res;
 	}
 
-	template <size_t OtherBlockSize>
+	template <std::size_t OtherBlockSize>
 	constexpr ColorFormat operator/(
 		const ColorFormat<ChannelType, ChannelCount, OtherBlockSize>& o
 	) const {
 		ColorFormat res;
-		for (size_t c = 0; c < ChannelCount; c++)
-			for (int b = 0; b < BlockSize; b++)
+		for (std::size_t c = 0; c < ChannelCount; c++)
+			for (std::size_t b = 0; b < BlockSize; b++)
 				res[c][b] = data[c][b] / o[c][OtherBlockSize == 1 ? 0 : b];
 		return res;
 	}
 
 	constexpr ColorFormat operator+(ChannelType s) const {
 		ColorFormat res;
-		for (size_t c = 0; c < ChannelCount; c++)
-			for (int b = 0; b < BlockSize; b++) res[c][b] = data[c][b] + s;
+		for (std::size_t c = 0; c < ChannelCount; c++)
+			for (std::size_t b = 0; b < BlockSize; b++) res[c][b] = data[c][b] + s;
 		return res;
 	}
 	constexpr ColorFormat operator-(ChannelType s) const {
 		ColorFormat res;
-		for (size_t c = 0; c < ChannelCount; c++)
-			for (int b = 0; b < BlockSize; b++) res[c][b] = data[c][b] - s;
+		for (std::size_t c = 0; c < ChannelCount; c++)
+			for (std::size_t b = 0; b < BlockSize; b++) res[c][b] = data[c][b] - s;
 		return res;
 	}
 	constexpr ColorFormat operator*(ChannelType s) const {
 		ColorFormat res;
-		for (size_t c = 0; c < ChannelCount; c++)
-			for (int b = 0; b < BlockSize; b++) res[c][b] = data[c][b] * s;
+		for (std::size_t c = 0; c < ChannelCount; c++)
+			for (std::size_t b = 0; b < BlockSize; b++) res[c][b] = data[c][b] * s;
 		return res;
 	}
 	constexpr ColorFormat operator/(ChannelType s) const {
 		ColorFormat res;
-		for (size_t c = 0; c < ChannelCount; c++)
-			for (int b = 0; b < BlockSize; b++) res[c][b] = data[c][b] / s;
+		for (std::size_t c = 0; c < ChannelCount; c++)
+			for (std::size_t b = 0; b < BlockSize; b++) res[c][b] = data[c][b] / s;
 		return res;
 	}
 
 	template <typename ResultType>
 	constexpr std::array<ResultType, BlockSize> lengthSquared() {
 		std::array<ResultType, BlockSize> res = {};
-		for (size_t c = 0; c < ChannelCount; c++)
-			for (int b = 0; b < BlockSize; b++)
+		for (std::size_t c = 0; c < ChannelCount; c++)
+			for (std::size_t b = 0; b < BlockSize; b++)
 				res[b] += data[c][b] * data[c][b] * (c < 3 ? 1 : 0);
 
 		return res;
@@ -244,7 +244,7 @@ template <
 	typename ChannelType,
 	ChannelLayout... Channels>
 union ColorFormatPacked {
-	template <size_t ChannelIndex>
+	template <std::size_t ChannelIndex>
 	static constexpr void _setValue(Container& data, ChannelType value) {
 		constexpr ChannelLayout Layout =
 			std::get<ChannelIndex>(std::make_tuple(Channels...));
@@ -263,7 +263,7 @@ union ColorFormatPacked {
 		return;
 	}
 
-	template <size_t ChannelIndex>
+	template <std::size_t ChannelIndex>
 	static constexpr ChannelType _getValue(const Container data) {
 		constexpr ChannelLayout Layout =
 			std::get<ChannelIndex>(std::make_tuple(Channels...));
@@ -357,7 +357,7 @@ union ColorFormatPacked {
 		return otherFormat;
 	}
 
-	template <typename OtherChannelType, size_t ChannelCount>
+	template <typename OtherChannelType, std::size_t ChannelCount>
 	operator ColorFormat<OtherChannelType, ChannelCount, 1>() const {
 		ColorFormat<OtherChannelType, ChannelCount, 1> otherFormat;
 
@@ -422,7 +422,7 @@ union ColorFormatPacked {
 		return value;
 	}
 
-	template <size_t I>
+	template <std::size_t I>
 	struct NamedChannelProxy {
 		Container data;
 		NamedChannelProxy& operator=(ChannelType value) {
@@ -438,12 +438,12 @@ union ColorFormatPacked {
 	NamedChannelProxy<2> b;
 	NamedChannelProxy<3> a;
 };
-template <size_t BlockSize>
+template <std::size_t BlockSize>
 using RGBA8n = ColorFormat<uint8_t, 4, BlockSize>;
 using RGBA8 = RGBA8n<1>;
 using RGBA8Block = RGBA8n<16>;
 
-template <size_t BlockSize>
+template <std::size_t BlockSize>
 using RGB8n = ColorFormat<uint8_t, 3, BlockSize>;
 
 using RGB8 = RGB8n<1>;
@@ -465,13 +465,13 @@ using RGB565 = ColorFormatPacked<
 		.offset = 0,
 	}>;
 
-template <size_t BlockSize>
+template <std::size_t BlockSize>
 using RG8n = ColorFormat<uint8_t, 2, BlockSize>;
 
 using RG8 = RG8n<1>;
 using RG8Block = RG8n<16>;
 
-template <size_t BlockSize>
+template <std::size_t BlockSize>
 using R8n = ColorFormat<uint8_t, 1, BlockSize>;
 
 using R8 = R8n<1>;
