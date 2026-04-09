@@ -253,7 +253,7 @@ union ColorFormatPacked {
 		mask <<= Layout.offset;
 		data &= ~mask;
 
-		Container bitValue;
+		Container bitValue = 0;
 		memcpy(&bitValue, &value, sizeof(ChannelType));
 
 		bitValue >>= sizeof(ChannelType) * 8 - Layout.bits;
@@ -268,13 +268,14 @@ union ColorFormatPacked {
 		constexpr ChannelLayout Layout =
 			std::get<ChannelIndex>(std::make_tuple(Channels...));
 
-		ChannelType value;
+		ChannelType value = 0;
 		Container bitValue = data;
 		bitValue >>= Layout.offset;
 		bitValue = bitValue & ((1 << (Layout.bits + 1)) - 1);
+		uint8_t offset = (sizeof(ChannelType) * 8 - Layout.bits);
 
-		bitValue = bitValue << (sizeof(ChannelType) * 8 - Layout.bits) |
-		           bitValue >> Layout.bits;
+		bitValue = bitValue << offset |
+		           bitValue >> (Layout.bits - offset);
 
 		memcpy(&value, &bitValue, sizeof(ChannelType));
 

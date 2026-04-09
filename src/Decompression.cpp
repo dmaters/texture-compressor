@@ -23,10 +23,10 @@ void _decompress(
 		for (int i = 0; i < 16; i++) {
 			int texelIndex = baseIndex;
 			uint32_t dx = i % 4;
-			texelIndex += x + dx < width ? dx : width % 4;
+			texelIndex += x + dx < width ? dx : width % 4 - 1;
 
 			uint32_t dy = i / 4;
-			texelIndex += y + dy < height ? dy * width : (height % 4) * width;
+			texelIndex += y + dy < height ? dy * width : (height  % 4 - 1) * width;
 
 			texelIndex *= DataType::channels();
 			for (int c = 0; c < DataType::channels(); c++) {

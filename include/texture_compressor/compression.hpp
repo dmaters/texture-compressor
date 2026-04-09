@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <cstddef>
 
 #include "common.hpp"
 namespace texture_compressor {

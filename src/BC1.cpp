@@ -4,6 +4,8 @@
 #include <stdint.h>
 
 #include <algorithm>
+#include <cstdint>
+#include "ColorFormat.hpp"
 struct EndpointsData {
 	RGBA8 min;
 	RGBA8 max;
@@ -36,10 +38,9 @@ BC1Block BC1Block::encode(const RGBA8Block& values) {
 	BC1Block block;
 
 	auto [minEndpoint, maxEndpoint] = computeEndpoints(values);
-
-	bool equalEndpoints =
-		static_cast<RGB8>(static_cast<RGB565>(maxEndpoint - minEndpoint))
-			.lengthSquared<uint32_t>()[0] == 0;
+	RGB565 minEncoded =	static_cast<RGB565>(minEndpoint);
+	RGB565 maxEncoded = static_cast<RGB565>(maxEndpoint);
+	bool equalEndpoints =(static_cast<RGB8>(maxEncoded) - static_cast<RGB8>(minEncoded)).lengthSquared<uint32_t>()[0] == 0;
 
 	bool containsTransparency = minEndpoint[3][0] < 128;
 
@@ -47,13 +48,13 @@ BC1Block BC1Block::encode(const RGBA8Block& values) {
 
 	if (alphaMode) {
 		block.endpoints = {
-			static_cast<RGB565>(minEndpoint),
-			static_cast<RGB565>(maxEndpoint),
+			minEncoded,
+			maxEncoded,
 		};
 	} else {
 		block.endpoints = {
-			static_cast<RGB565>(maxEndpoint),
-			static_cast<RGB565>(minEndpoint),
+			maxEncoded,
+			minEncoded,
 		};
 	}
 
