@@ -8,7 +8,10 @@ std::size_t texture_compressor::query_size(
 ) {
 	mipmapLevels -= 1;
 
-	size_t blockSize = 0;
+	std::size_t blockSize = 0;
+	std::size_t alignedWidth = (width + 3) / 4 * 4;
+	std::size_t alignedHeight = (height + 3) / 4 * 4;
+
 	switch (format) {
 		case Format::BC1:
 		case Format::BC1_ALPHA:
@@ -22,8 +25,10 @@ std::size_t texture_compressor::query_size(
 			return 0;
 	}
 	if (mipmapLevels > 0)
-		return std::ceil(width * height / 16) * blockSize +
-		       query_size(width / 2, height / 2, format, mipmapLevels);
+		return alignedWidth * alignedHeight / 16 * blockSize +
+		       query_size(
+				   alignedWidth / 2, alignedHeight / 2, format, mipmapLevels
+			   );
 	else
-		return std::ceil(width * height / 16) * blockSize;
+		return alignedWidth * alignedHeight / 16 * blockSize;
 }

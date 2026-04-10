@@ -1,4 +1,6 @@
 #pragma once
+#include <cstddef>
+#include <cstdint>
 #include <cstdlib>
 
 #include "common.hpp"
@@ -9,6 +11,7 @@ bool decompress(
 	std::size_t height,
 	Format format,
 	void *data,
-	void *output
+	void *output,
+	uint8_t mipmaps = 1
 );
 };  // namespace texture_compressor
