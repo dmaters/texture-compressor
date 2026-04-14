@@ -23,8 +23,8 @@ target_include_directories(
 )
 
 
-option(TEXTURE_COMPRESSOR_BUILD_TESTS "Build tests" ON)
-option(TEXTURE_COMPRESSOR_BUILD_BENCHMARKS "Build benchmarks" ON)
+option(TEXTURE_COMPRESSOR_BUILD_TESTS "Build tests" OFF)
+option(TEXTURE_COMPRESSOR_BUILD_BENCHMARKS "Build benchmarks" OFF)
 
 
 if(TEXTURE_COMPRESSOR_BUILD_TESTS)
