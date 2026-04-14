@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cmath>
 #include <vector>
 
 #include "texture_compressor/compression.hpp"
@@ -129,7 +130,9 @@ void benchmarkFormat(texture_compressor::Format format) {
 	}
 	squaredError /= size;
 
-	std::printf("Error: %.6f \n", squaredError);
+	std::printf("Squared Error: %.6f \n", squaredError);
+	double psnr = 10 * log10(pow(255, 2) / squaredError);
+	std::printf("PSNR Error: %.2fdb \n", psnr);
 }
 
 int main() {
