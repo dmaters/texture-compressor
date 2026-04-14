@@ -1,10 +1,8 @@
 #include "BC1.hpp"
 
-#include <smmintrin.h>  // SSE4.1
-#include <stdint.h>
-
 #include <algorithm>
 #include <cstdint>
+
 #include "ColorFormat.hpp"
 struct EndpointsData {
 	RGBA8 min;
@@ -14,14 +12,11 @@ struct EndpointsData {
 EndpointsData computeEndpoints(const RGBA8Block& values) {
 	RGBA8 min, max;
 
-	uint8_t channelMin[4] = { 255, 255, 255, 255 };
-	uint8_t channelMax[4] = { 0, 0, 0, 0 };
+	std::uint_fast32_t channelMin[4];
+	std::uint_fast32_t channelMax[4];
 	for (int c = 0; c < 4; c++) {
-		for (int b = 0; b < 16; b++) {
-			uint8_t v = values[c][b];
-			channelMin[c] = std::min(channelMin[c], v);
-			channelMax[c] = std::max(channelMax[c], v);
-		}
+		channelMin[c] = *std::min_element(values[c].begin(), values[c].end());
+		channelMax[c] = *std::max_element(values[c].begin(), values[c].end());
 	}
 	for (int c = 0; c < 4; c++) {
 		min[c][0] = channelMin[c];
@@ -38,9 +33,11 @@ BC1Block BC1Block::encode(const RGBA8Block& values) {
 	BC1Block block;
 
 	auto [minEndpoint, maxEndpoint] = computeEndpoints(values);
-	RGB565 minEncoded =	static_cast<RGB565>(minEndpoint);
+	RGB565 minEncoded = static_cast<RGB565>(minEndpoint);
 	RGB565 maxEncoded = static_cast<RGB565>(maxEndpoint);
-	bool equalEndpoints =(static_cast<RGB8>(maxEncoded) - static_cast<RGB8>(minEncoded)).lengthSquared<uint32_t>()[0] == 0;
+
+	RGBA8 diff = maxEndpoint - minEndpoint;
+	bool equalEndpoints = diff[0][0] < 8 && diff[1][0] < 16 && diff[2][0] < 8;
 
 	bool containsTransparency = minEndpoint[3][0] < 128;
 
@@ -63,35 +60,37 @@ BC1Block BC1Block::encode(const RGBA8Block& values) {
 	RGBA8Block directions = values - minEndpoint;
 	auto vdot = RGBA8Block::dot<uint32_t>(directions, dir);
 
+	std::array<uint32_t, 16> indices;
 	if (alphaMode) {
-		for (int i = 0; i < 16; i++) {
-			uint8_t index = 1;
-			if (vdot[i] <= dot / 4)
-				index = 0;
-			else if (vdot[i] <= dot / 4 * 3)
-				index = 2;
+		const std::uint_fast32_t nodes[2] = { dot / 4, dot / 4 * 3 };
 
-			block.indices |= index << (i * 2);
+		for (int i = 0; i < indices.size(); i++) {
+			indices[i] = (vdot[i] <= nodes[0]) + (vdot[i] <= nodes[1]);
+			indices[i] = (indices[i] + 1) % 3;
 		}
 		if (containsTransparency) {
 			for (int i = 0; i < 16; i++) {
 				if (values[3][i] < 128) {
-					block.indices |= 3 << (i * 2);
+					indices[i] = 3 << (i * 2);
 				}
 			}
 		}
 	} else {
-		for (int i = 0; i < 16; i++) {
-			uint8_t index = 0;
-			if (vdot[i] <= dot / 6)
-				index = 1;
-			else if (vdot[i] <= dot / 2)
-				index = 2;
-			else if (vdot[i] <= dot / 6 * 5)
-				index = 3;
-			block.indices |= index << (i * 2);
+		const std::uint_fast32_t nodes[3] = {
+			dot / 6,
+			dot / 6 * 3,
+			dot / 6 * 5,
+		};
+
+		for (int i = 0; i < indices.size(); i++) {
+			indices[i] = (vdot[i] >= nodes[0]) + (vdot[i] >= nodes[1]) +
+			             (vdot[i] >= nodes[2]);
+			indices[i] = (indices[i] + 1) % 4;
 		}
 	}
+
+	for (int i = 0; i < indices.size(); i++)
+		block.indices |= indices[i] << (i * 2);
 
 	return block;
 }
@@ -115,8 +114,8 @@ std::array<RGBA8, 16> BC1Block::decode(const BC1Block& block) {
 
 	std::array<RGBA8, 16> res;
 
-	for (int i = 0; i < 16; i++) {
-		uint8_t index = (block.indices >> (i * 2)) & 0b11;
+	for (int i = 0; i < res.size(); i++) {
+		std::uint_fast32_t index = (block.indices >> (i * 2)) & 0b11;
 
 		res[i] = values[index];
 

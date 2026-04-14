@@ -32,7 +32,8 @@ struct ColorFormat {
 			block
 	) {
 		for (std::size_t c = 0; c < ChannelCount; c++)
-			for (std::size_t b = 0; b < BlockSize; b++) data[c][b] = block[b][c][0];
+			for (std::size_t b = 0; b < BlockSize; b++)
+				data[c][b] = block[b][c][0];
 	}
 	constexpr ColorFormat(ChannelType value = ChannelType {}) {
 		for (std::size_t c = 0; c < ChannelCount; c++)
@@ -46,7 +47,9 @@ struct ColorFormat {
 		return std::span<ChannelType>(data[i]);
 	}
 
-	constexpr const std::span<const ChannelType> operator[](std::size_t i) const {
+	constexpr const std::span<const ChannelType> operator[](
+		std::size_t i
+	) const {
 		return std::span<const ChannelType>(data[i]);
 	}
 
@@ -130,25 +133,29 @@ struct ColorFormat {
 	constexpr ColorFormat operator+(ChannelType s) const {
 		ColorFormat res;
 		for (std::size_t c = 0; c < ChannelCount; c++)
-			for (std::size_t b = 0; b < BlockSize; b++) res[c][b] = data[c][b] + s;
+			for (std::size_t b = 0; b < BlockSize; b++)
+				res[c][b] = data[c][b] + s;
 		return res;
 	}
 	constexpr ColorFormat operator-(ChannelType s) const {
 		ColorFormat res;
 		for (std::size_t c = 0; c < ChannelCount; c++)
-			for (std::size_t b = 0; b < BlockSize; b++) res[c][b] = data[c][b] - s;
+			for (std::size_t b = 0; b < BlockSize; b++)
+				res[c][b] = data[c][b] - s;
 		return res;
 	}
 	constexpr ColorFormat operator*(ChannelType s) const {
 		ColorFormat res;
 		for (std::size_t c = 0; c < ChannelCount; c++)
-			for (std::size_t b = 0; b < BlockSize; b++) res[c][b] = data[c][b] * s;
+			for (std::size_t b = 0; b < BlockSize; b++)
+				res[c][b] = data[c][b] * s;
 		return res;
 	}
 	constexpr ColorFormat operator/(ChannelType s) const {
 		ColorFormat res;
 		for (std::size_t c = 0; c < ChannelCount; c++)
-			for (std::size_t b = 0; b < BlockSize; b++) res[c][b] = data[c][b] / s;
+			for (std::size_t b = 0; b < BlockSize; b++)
+				res[c][b] = data[c][b] / s;
 		return res;
 	}
 
@@ -274,8 +281,7 @@ union ColorFormatPacked {
 		bitValue = bitValue & ((1 << (Layout.bits + 1)) - 1);
 		uint8_t offset = (sizeof(ChannelType) * 8 - Layout.bits);
 
-		bitValue = bitValue << offset |
-		           bitValue >> (Layout.bits - offset);
+		bitValue = bitValue << offset | bitValue >> (Layout.bits - offset);
 
 		memcpy(&value, &bitValue, sizeof(ChannelType));
 

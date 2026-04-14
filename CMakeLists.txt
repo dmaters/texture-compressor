@@ -36,3 +36,20 @@ endif()
 if(TEXTURE_COMPRESSOR_BUILD_BENCHMARKS)
     add_subdirectory(benchmarks)
 endif()
+
+
+if(MSVC)
+  target_compile_options(texture-compressor PRIVATE
+    $<$<CONFIG:Release>:/O2>
+    $<$<CONFIG:Release>:/arch:AVX2>
+    $<$<CONFIG:RelWithDebInfo>:/O2>
+    $<$<CONFIG:RelWithDebInfo>:/arch:AVX2>
+  )
+else()
+  target_compile_options(texture-compressor PRIVATE
+    $<$<CONFIG:Release>:-march=native>
+    $<$<CONFIG:Release>:-O3>
+    $<$<CONFIG:RelWithDebInfo>:-march=native>
+    $<$<CONFIG:RelWithDebInfo>:-O3>
+  )
+endif()
