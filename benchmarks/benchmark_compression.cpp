@@ -132,7 +132,7 @@ void benchmarkFormat(texture_compressor::Format format) {
 
 	std::printf("Squared Error: %.6f \n", squaredError);
 	double psnr = 10 * log10(pow(255, 2) / squaredError);
-	std::printf("PSNR Error: %.2fdb \n", psnr);
+	std::printf("PSNR Error: %.2fdB \n", psnr);
 }
 
 int main() {
