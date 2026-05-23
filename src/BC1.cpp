@@ -228,11 +228,14 @@ BlockType encodeBlock(const ColorType<16>& values) {
 
 	if constexpr (ColorType<1>::channels() == 4) {
 		for (int i = 0; i < 16; i++) {
-			alternativeMode |= values[i][3] < 128;
+			alternativeMode |= values[3][i] < 128;
 		}
 
 		if (alternativeMode)
 			endpointsData = computeEndpoints_3<ColorType>(values);
+		else
+			endpointsData = computeEndpoints_4<ColorType>(values);
+
 	} else
 		endpointsData = computeEndpoints_4<ColorType>(values);
 
@@ -276,14 +279,14 @@ BlockType encodeBlock(const ColorType<16>& values) {
 		if constexpr (ColorType<1>::channels() == 4) {
 			for (int i = 0; i < 16; i++) {
 				if (values[3][i] < 128) {
-					indices[i] = 3 << (i * 2);
+					indices[i] = 3;
 				}
 			}
 		} else {
 			for (int i = 0; i < 16; i++) {
 				uint16_t sum = values[0][i] + values[1][i] + values[2][i];
 				if (sum == 0) {
-					indices[i] = 3 << (i * 2);
+					indices[i] = 3;
 				}
 			}
 		}
