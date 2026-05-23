@@ -23,19 +23,13 @@ target_include_directories(
 )
 
 
-option(TEXTURE_COMPRESSOR_BUILD_TESTS "Build tests" OFF)
-option(TEXTURE_COMPRESSOR_BUILD_BENCHMARKS "Build benchmarks" OFF)
+option(TEXTURE_COMPRESSOR_BUILD_DEMO "Build demo" OFF)
 
 
-if(TEXTURE_COMPRESSOR_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
+if(TEXTURE_COMPRESSOR_BUILD_DEMO)
+    add_subdirectory(demo)
 endif()
 
-
-if(TEXTURE_COMPRESSOR_BUILD_BENCHMARKS)
-    add_subdirectory(benchmarks)
-endif()
 
 
 if(MSVC)
