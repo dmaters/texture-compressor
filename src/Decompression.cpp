@@ -74,9 +74,13 @@ bool texture_compressor::decompress(
 
 	switch (format) {
 		case Format::BC1_ALPHA:
+			decompress<RGBA8n, BC1BlockAlpha>(
+				width, height, (BC1BlockAlpha *)data, (RGBA8 *)output, mipmaps
+			);
+			break;
 		case Format::BC1:
-			decompress<RGBA8n, BC1Block>(
-				width, height, (BC1Block *)data, (RGBA8 *)output, mipmaps
+			decompress<RGB8n, BC1BlockOpaque>(
+				width, height, (BC1BlockOpaque *)data, (RGB8 *)output, mipmaps
 			);
 			break;
 

@@ -51,12 +51,12 @@ std::array<R8, 16> BC4Block::decode(const BC4Block& block) {
 	std::array<R8, 8> values {
 		block.endpoints[0],
 		block.endpoints[1],
-		R8::lerp(block.endpoints[1], block.endpoints[0], 255 / 7 * 6),
-		R8::lerp(block.endpoints[1], block.endpoints[0], 255 / 7 * 5),
-		R8::lerp(block.endpoints[1], block.endpoints[0], 255 / 7 * 4),
-		R8::lerp(block.endpoints[1], block.endpoints[0], 255 / 7 * 3),
-		R8::lerp(block.endpoints[1], block.endpoints[0], 255 / 7 * 2),
-		R8::lerp(block.endpoints[1], block.endpoints[0], 255 / 7 * 1),
+		R8::lerp(block.endpoints[1], block.endpoints[0], 255 * 6 / 7),
+		R8::lerp(block.endpoints[1], block.endpoints[0], 255 * 5 / 7),
+		R8::lerp(block.endpoints[1], block.endpoints[0], 255 * 4 / 7),
+		R8::lerp(block.endpoints[1], block.endpoints[0], 255 * 3 / 7),
+		R8::lerp(block.endpoints[1], block.endpoints[0], 255 * 2 / 7),
+		R8::lerp(block.endpoints[1], block.endpoints[0], 255 * 1 / 7),
 	};
 
 	uint64_t indices = 0;

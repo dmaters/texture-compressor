@@ -106,10 +106,23 @@ bool texture_compressor::compress(
 	uint8_t mipmapLevels
 ) {
 	switch (format) {
-		case Format::BC1_ALPHA:
+		case Format::BC1_ALPHA: {
+			compress<RGBA8n, BC1BlockAlpha>(
+				width,
+				height,
+				(RGBA8 *)data,
+				(BC1BlockAlpha *)output,
+				mipmapLevels
+			);
+			break;
+		}
 		case Format::BC1: {
-			compress<RGBA8n, BC1Block>(
-				width, height, (RGBA8 *)data, (BC1Block *)output, mipmapLevels
+			compress<RGB8n, BC1BlockOpaque>(
+				width,
+				height,
+				(RGB8 *)data,
+				(BC1BlockOpaque *)output,
+				mipmapLevels
 			);
 			break;
 		}

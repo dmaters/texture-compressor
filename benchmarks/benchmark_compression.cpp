@@ -75,6 +75,8 @@ void benchmarkFormat(texture_compressor::Format format) {
 	uint8_t channels = 0;
 	switch (format) {
 		case texture_compressor::Format::BC1:
+			channels = 3;
+			break;
 		case texture_compressor::Format::BC1_ALPHA:
 			channels = 4;
 			break;
