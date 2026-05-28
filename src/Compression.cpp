@@ -1,14 +1,15 @@
 #include "texture_compressor/compression.hpp"
 
 #include <cassert>
+#include <cmath>
 
 #include "BC1.hpp"
 #include "BC4.hpp"
 #include "BC5.hpp"
 
-template <template <std::size_t> typename DataType, typename BlockType>
+template <typename ColorType, typename BlockType>
 void compress(
-	std::size_t width, std::size_t height, DataType<1> *data, BlockType *output
+	std::size_t width, std::size_t height, ColorType *data, BlockType *output
 ) {
 	std::size_t alignedWidth = (width + 3) / 4 * 4;
 	std::size_t alignedHeight = (height + 3) / 4 * 4;
@@ -20,7 +21,8 @@ void compress(
 		int x = (b % blocksPerRow) * 4;
 		int y = (b / blocksPerRow) * 4;
 
-		DataType<16> values;
+		ColorBlock<typename ColorType::value_type, std::tuple_size_v<ColorType>>
+			values;
 		std::size_t baseIndex = x + y * width;
 
 		for (int i = 0; i < 16; i++) {
@@ -33,26 +35,27 @@ void compress(
 			texelIndex += (y + dy) < height ? dy * width
 			                                : (height % 4 - 1) * width;
 
-			for (int c = 0; c < DataType<1>::channels(); c++) {
-				values[c][i] = data[texelIndex][c][0];
+			for (int c = 0; c < std::tuple_size_v<ColorType>; c++) {
+				values[c][i] = data[texelIndex][c];
 			}
 		}
-
 		output[b] = BlockType::encode(values);
 	}
 }
 
-template <template <std::size_t> typename DataType>
-void reduceMipLevel(std::size_t width, std::size_t height, DataType<1> *data) {
+template <typename ColorType>
+void reduceMipLevel(std::size_t width, std::size_t height, ColorType *data) {
 	for (std::size_t y = 0; y < height; y++) {
 		for (std::size_t x = 0; x < width; x += 2) {
 			std::size_t elementIndex = x + y * width;
 			std::size_t endValueIndex = x / 2 + y * width;
 
-			DataType<1> el1 = data[elementIndex];
-			DataType<1> el2 = data[elementIndex + (x + 1 < width ? 1 : 0)];
+			ColorType el1 = data[elementIndex];
+			ColorType el2 = data[elementIndex + (x + 1 < width ? 1 : 0)];
 
-			data[endValueIndex] = el1 / 2 + el2 / 2;
+			for (int c = 0; c < std::tuple_size_v<ColorType>; c++) {
+				data[endValueIndex][c] = el1[c] / 2 + el2[c] / 2;
+			}
 		}
 	}
 
@@ -61,19 +64,20 @@ void reduceMipLevel(std::size_t width, std::size_t height, DataType<1> *data) {
 			std::size_t elementIndex = x + y * width;
 			std::size_t endValueIndex = x + y / 2 * (width / 2);
 
-			DataType<1> el1 = data[elementIndex];
-			DataType<1> el2 = data[elementIndex + (y + 1 < height ? width : 0)];
-
-			data[endValueIndex] = el1 / 2 + el2 / 2;
+			ColorType el1 = data[elementIndex];
+			ColorType el2 = data[elementIndex + (y + 1 < height ? width : 0)];
+			for (int c = 0; c < std::tuple_size_v<ColorType>; c++) {
+				data[endValueIndex][c] = el1[c] / 2 + el2[c] / 2;
+			}
 		}
 	}
 }
 
-template <template <std::size_t> typename DataType, typename BlockType>
+template <typename ColorType, typename BlockType>
 void compress(
 	std::size_t width,
 	std::size_t height,
-	DataType<1> *data,
+	ColorType *data,
 	BlockType *output,
 	uint8_t mipLevels
 ) {
@@ -84,11 +88,11 @@ void compress(
 		std::size_t mipHeight = height / pow(2, m);
 
 		if (m > 0)
-			reduceMipLevel<DataType>(
+			reduceMipLevel<ColorType>(
 				width / pow(2, m - 1), height / pow(2, m - 1), data
 			);
 
-		compress<DataType, BlockType>(
+		compress<ColorType, BlockType>(
 			mipWidth, mipHeight, data, output + offset
 		);
 		std::size_t alignedWidth = (mipWidth + 3) / 4 * 4;
@@ -107,7 +111,7 @@ bool texture_compressor::compress(
 ) {
 	switch (format) {
 		case Format::BC1_ALPHA: {
-			compress<RGBA8n, BC1BlockAlpha>(
+			compress<RGBA8, BC1BlockAlpha>(
 				width,
 				height,
 				(RGBA8 *)data,
@@ -117,25 +121,21 @@ bool texture_compressor::compress(
 			break;
 		}
 		case Format::BC1: {
-			compress<RGB8n, BC1BlockOpaque>(
-				width,
-				height,
-				(RGB8 *)data,
-				(BC1BlockOpaque *)output,
-				mipmapLevels
+			compress<RGB8, BC1Block>(
+				width, height, (RGB8 *)data, (BC1Block *)output, mipmapLevels
 			);
 			break;
 		}
 
 		case Format::BC4: {
-			compress<R8n, BC4Block>(
+			compress<R8, BC4Block>(
 				width, height, (R8 *)data, (BC4Block *)output, mipmapLevels
 			);
 
 			break;
 		}
 		case Format::BC5: {
-			compress<RG8n, BC5Block>(
+			compress<RG8, BC5Block>(
 				width, height, (RG8 *)data, (BC5Block *)output, mipmapLevels
 			);
 			break;

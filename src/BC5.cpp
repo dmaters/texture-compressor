@@ -22,8 +22,8 @@ std::array<RG8, 16> BC5Block::decode(const BC5Block& block) {
 
 	std::array<RG8, 16> values;
 	for (int i = 0; i < 16; i++) {
-		values[i][0][0] = channel1[i][0][0];
-		values[i][1][0] = channel2[i][0][0];
+		values[i][0] = channel1[i][0];
+		values[i][1] = channel2[i][0];
 	}
 
 	return values;

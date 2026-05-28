@@ -1,5 +1,6 @@
 #include "BC4.hpp"
 
+#include <cmath>
 struct Endpoints {
 	uint8_t min;
 	uint8_t max;
@@ -51,12 +52,25 @@ std::array<R8, 16> BC4Block::decode(const BC4Block& block) {
 	std::array<R8, 8> values {
 		block.endpoints[0],
 		block.endpoints[1],
-		R8::lerp(block.endpoints[1], block.endpoints[0], 255 * 6 / 7),
-		R8::lerp(block.endpoints[1], block.endpoints[0], 255 * 5 / 7),
-		R8::lerp(block.endpoints[1], block.endpoints[0], 255 * 4 / 7),
-		R8::lerp(block.endpoints[1], block.endpoints[0], 255 * 3 / 7),
-		R8::lerp(block.endpoints[1], block.endpoints[0], 255 * 2 / 7),
-		R8::lerp(block.endpoints[1], block.endpoints[0], 255 * 1 / 7),
+		static_cast<uint8_t>(
+			std::lerp(block.endpoints[1][0], block.endpoints[0][0], 6.0f / 7.0f)
+		),
+		static_cast<uint8_t>(
+			std::lerp(block.endpoints[1][0], block.endpoints[0][0], 5.0f / 7.0f)
+		),
+		static_cast<uint8_t>(
+			std::lerp(block.endpoints[1][0], block.endpoints[0][0], 4.0f / 7.0f)
+		),
+		static_cast<uint8_t>(
+			std::lerp(block.endpoints[1][0], block.endpoints[0][0], 3.0f / 7.0f)
+		),
+		static_cast<uint8_t>(
+			std::lerp(block.endpoints[1][0], block.endpoints[0][0], 2.0f / 7.0f)
+		),
+		static_cast<uint8_t>(
+			std::lerp(block.endpoints[1][0], block.endpoints[0][0], 1.0f / 7.0f)
+		),
+
 	};
 
 	uint64_t indices = 0;

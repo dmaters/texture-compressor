@@ -1,12 +1,14 @@
 #include "texture_compressor/decompression.hpp"
 
+#include <cmath>
+
 #include "BC1.hpp"
 #include "BC4.hpp"
 #include "BC5.hpp"
 
-template <template <std::size_t> typename DataType, typename BlockType>
+template <typename ColorType, typename BlockType>
 void decompress(
-	std::size_t width, std::size_t height, BlockType *data, DataType<1> *output
+	std::size_t width, std::size_t height, BlockType *data, ColorType *output
 ) {
 	std::size_t alignedWidth = (width + 3) / 4 * 4;
 	std::size_t alignedHeight = (height + 3) / 4 * 4;
@@ -18,7 +20,7 @@ void decompress(
 		std::size_t x = (b % blocksPerRow) * 4;
 		std::size_t y = (b / blocksPerRow) * 4;
 
-		std::array<DataType<1>, 16> values = BlockType::decode(data[b]);
+		std::array<ColorType, 16> values = BlockType::decode(data[b]);
 
 		std::size_t baseIndex = x + y * width;
 
@@ -36,22 +38,22 @@ void decompress(
 	}
 }
 
-template <template <std::size_t> typename DataType, typename BlockType>
+template <typename ColorType, typename BlockType>
 void decompress(
 	std::size_t width,
 	std::size_t height,
 	BlockType *data,
-	DataType<1> *output,
+	ColorType *output,
 	uint8_t mipmaps
 ) {
 	std::size_t offset = 0;
 	std::size_t alignedOffset = 0;
 
 	for (int i = 0; i < mipmaps; i++) {
-		std::size_t mipWidth = width / pow(2, i);
-		std::size_t mipHeight = height / pow(2, i);
+		std::size_t mipWidth = width / std::pow(2, i);
+		std::size_t mipHeight = height / std::pow(2, i);
 
-		decompress<DataType, BlockType>(
+		decompress<ColorType, BlockType>(
 			mipWidth, mipHeight, data + alignedOffset / 16, output + offset
 		);
 		std::size_t alignedWidth = (mipWidth + 3) / 4 * 4;
@@ -74,18 +76,18 @@ bool texture_compressor::decompress(
 
 	switch (format) {
 		case Format::BC1_ALPHA:
-			decompress<RGBA8n, BC1BlockAlpha>(
+			decompress<RGBA8, BC1BlockAlpha>(
 				width, height, (BC1BlockAlpha *)data, (RGBA8 *)output, mipmaps
 			);
 			break;
 		case Format::BC1:
-			decompress<RGB8n, BC1BlockOpaque>(
-				width, height, (BC1BlockOpaque *)data, (RGB8 *)output, mipmaps
+			decompress<RGB8, BC1Block>(
+				width, height, (BC1Block *)data, (RGB8 *)output, mipmaps
 			);
 			break;
 
 		case Format::BC4: {
-			decompress<R8n, BC4Block>(
+			decompress<R8, BC4Block>(
 				width, height, (BC4Block *)data, (R8 *)output, mipmaps
 			);
 
@@ -94,7 +96,7 @@ bool texture_compressor::decompress(
 		case Format::BC5: {
 			BC5Block *textureData = static_cast<BC5Block *>(data);
 
-			decompress<RG8n, BC5Block>(
+			decompress<RG8, BC5Block>(
 				width, height, (BC5Block *)data, (RG8 *)output, mipmaps
 			);
 			break;

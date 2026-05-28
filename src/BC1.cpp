@@ -1,34 +1,134 @@
 #include "BC1.hpp"
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstdint>
 
 #include "ColorFormat.hpp"
-template <template <size_t> typename ColorType>
 struct EndpointsData {
-	ColorType<1> min;
-	ColorType<1> max;
+	RGB8 min;
+	RGB8 max;
 	bool alternativeMode = false;
+};
+
+RGB565 rgb8_to_rgb565(RGB8 value) {
+	RGB565 res =
+		((value[0] >> 3) << 11) | ((value[1] >> 2) << 5) | (value[2] >> 3);
+	return res;
+}
+
+RGB8 rgb565_to_rgb8(RGB565 value) {
+	RGB8 res;
+	uint8_t r = (value >> 11) & 0x1F;
+	uint8_t g = (value >> 5) & 0x3F;
+	uint8_t b = (value >> 0) & 0x1F;
+
+	res[0] = (r << 3) | (r >> 2);
+	res[1] = (g << 2) | (g >> 4);
+	res[2] = (b << 3) | (b >> 2);
+	return res;
+}
+
+RGB8 lerp(RGB8 v1, RGB8 v2, float ratio) {
+	RGB8 res;
+
+	res[0] = v1[0] + (v2[0] - v1[0]) * ratio;
+	res[1] = v1[1] + (v2[1] - v1[1]) * ratio;
+	res[2] = v1[2] + (v2[2] - v1[2]) * ratio;
+
+	return res;
+}
+
+uint32_t dot(RGB8 v1, RGB8 v2) {
+	return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
+}
+
+std::array<uint8_t, 16> computeIndices__4nodes(
+	const RGB8& min, const RGB8& max, const RGB8Block& values
+) {
+	std::array<int16_t, 3> dir;
+	dir[0] = max[0] - min[0];
+	dir[1] = max[1] - min[1];
+	dir[2] = max[2] - min[2];
+
+	uint32_t dirDot = dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2];
+
+	std::array<int, 16> vdot;
+	for (int i = 0; i < 16; i++) {
+		std::array<int, 3> offsetColor;
+		for (int c = 0; c < 3; c++) {
+			offsetColor[c] = values[c][i] - min[c];
+		}
+		vdot[i] = offsetColor[0] * dir[0] + offsetColor[1] * dir[1] +
+		          offsetColor[2] * dir[2];
+	}
+
+	const float nodes[3] = {
+		dirDot / 6.0f,
+		dirDot * 3 / 6.0f,
+		dirDot * 5 / 6.0f,
+	};
+
+	std::array<uint8_t, 16> nearestNodes;
+
+	for (int i = 0; i < 16; i++) {
+		nearestNodes[i] = (vdot[i] >= nodes[0]) + (vdot[i] >= nodes[1]) +
+		                  (vdot[i] >= nodes[2]);
+	}
+
+	return nearestNodes;
+}
+
+std::array<uint8_t, 16> computeIndices__3nodes(
+	const RGB8& min, const RGB8& max, const RGB8Block& values
+) {
+	std::array<int16_t, 3> dir;
+	dir[0] = max[0] - min[0];
+	dir[1] = max[1] - min[1];
+	dir[2] = max[2] - min[2];
+
+	uint32_t dirDot = dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2];
+
+	std::array<int, 16> vdot;
+	for (int i = 0; i < 16; i++) {
+		std::array<int, 3> offsetColor;
+		for (int c = 0; c < 3; c++) {
+			offsetColor[c] = values[c][i] - min[c];
+		}
+		vdot[i] = offsetColor[0] * dir[0] + offsetColor[1] * dir[1] +
+		          offsetColor[2] * dir[2];
+	}
+
+	const float nodes[2] = {
+		dirDot / 3.0f,
+		dirDot * 2 / 3.0f,
+	};
+
+	std::array<uint8_t, 16> nearestNodes;
+
+	for (int i = 0; i < 16; i++) {
+		nearestNodes[i] = (vdot[i] <= nodes[0]) + (vdot[i] <= nodes[1]);
+	}
+
+	return nearestNodes;
+}
+
+EndpointsData computeEndpointsMinMax(const RGB8Block& values) {
+	RGB8 min, max;
+
+	for (int c = 0; c < 3; c++) {
+		min[c] = *std::min_element(values[c].begin(), values[c].end());
+		max[c] = *std::max_element(values[c].begin(), values[c].end());
+	}
+
+	return { .min = min, .max = max };
 };
 
 // stb_dxt inspired, we find the best fit axis, then we project and use least
 // square method to refine the endpoints
-template <template <size_t> typename ColorType>
-EndpointsData<ColorType> computeEndpoints_4(const ColorType<16>& values) {
-	ColorType<1> min, max;
-
-	std::uint32_t channelMin[ColorType<1>::channels()];
-	std::uint32_t channelMax[ColorType<1>::channels()];
-
-	for (int c = 0; c < ColorType<1>::channels(); c++) {
-		channelMin[c] = *std::min_element(values[c].begin(), values[c].end());
-		channelMax[c] = *std::max_element(values[c].begin(), values[c].end());
-	}
-
-	for (int c = 0; c < ColorType<1>::channels(); c++) {
-		min[c][0] = channelMin[c];
-		max[c][0] = channelMax[c];
-	}
+EndpointsData computeEndpointsPCA(const RGB8Block& values) {
+	auto [min, max, _] = computeEndpointsMinMax(values);
 
 	std::array<float, 9> C = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 	std::array<float, 3> mean = { 0, 0, 0 };
@@ -54,15 +154,18 @@ EndpointsData<ColorType> computeEndpoints_4(const ColorType<16>& values) {
 
 	for (int i = 0; i < 9; i++) C[i] /= 15.0f;
 
-	ColorType<1> baseDir = max - min;
+	RGB8 baseDir;
+	baseDir[0] = max[0] - min[0];
+	baseDir[1] = max[1] - min[1];
+	baseDir[2] = max[2] - min[2];
 
-	if (baseDir[0][0] + baseDir[1][0] + baseDir[2][0] == 0)
+	if (baseDir[0] + baseDir[1] + baseDir[2] == 0)
 		return { .min = min, .max = max, .alternativeMode = true };
 
 	std::array<float, 3> pcaDir {
-		static_cast<float>(baseDir[0][0]),
-		static_cast<float>(baseDir[1][0]),
-		static_cast<float>(baseDir[2][0]),
+		static_cast<float>(baseDir[0]),
+		static_cast<float>(baseDir[1]),
+		static_cast<float>(baseDir[2]),
 	};
 	float length = sqrt(
 		pcaDir[0] * pcaDir[0] + pcaDir[1] * pcaDir[1] + pcaDir[2] * pcaDir[2]
@@ -107,67 +210,38 @@ EndpointsData<ColorType> computeEndpoints_4(const ColorType<16>& values) {
 		if (dot > maxDot) maxDot = dot;
 	}
 
-	min[0][0] = std::clamp(mean[0] + pcaDir[0] * minDot, 0.0f, 255.0f);
-	min[1][0] = std::clamp(mean[1] + pcaDir[1] * minDot, 0.0f, 255.0f);
-	min[2][0] = std::clamp(mean[2] + pcaDir[2] * minDot, 0.0f, 255.0f);
+	min[0] = std::clamp(mean[0] + pcaDir[0] * minDot, 0.0f, 255.0f);
+	min[1] = std::clamp(mean[1] + pcaDir[1] * minDot, 0.0f, 255.0f);
+	min[2] = std::clamp(mean[2] + pcaDir[2] * minDot, 0.0f, 255.0f);
 
-	max[0][0] =
-		std::ceil(std::clamp(mean[0] + pcaDir[0] * maxDot, 0.0f, 255.0f));
-	max[1][0] =
-		std::ceil(std::clamp(mean[1] + pcaDir[1] * maxDot, 0.0f, 255.0f));
-	max[2][0] =
-		std::ceil(std::clamp(mean[2] + pcaDir[2] * maxDot, 0.0f, 255.0f));
+	max[0] = std::ceil(std::clamp(mean[0] + pcaDir[0] * maxDot, 0.0f, 255.0f));
+	max[1] = std::ceil(std::clamp(mean[1] + pcaDir[1] * maxDot, 0.0f, 255.0f));
+	max[2] = std::ceil(std::clamp(mean[2] + pcaDir[2] * maxDot, 0.0f, 255.0f));
 
 	// Least square for refinement
 	for (int it = 0; it < 4; it++) {
 		std::array<int, 3> dir;
 
-		dir[0] = max[0][0] - min[0][0];
-		dir[1] = max[1][0] - min[1][0];
-		dir[2] = max[2][0] - min[2][0];
-
-		uint32_t dot = dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2];
-
-		if (dot == 0) break;
-
-		std::array<int, 16> vdot;
-		for (int i = 0; i < 16; i++) {
-			std::array<int, 3> offsetColor;
-			for (int c = 0; c < 3; c++) {
-				offsetColor[c] = values[c][i] - min[c][0];
-			}
-			vdot[i] = offsetColor[0] * dir[0] + offsetColor[1] * dir[1] +
-			          offsetColor[2] * dir[2];
-		}
-
-		const float nodes[3] = {
-			dot / 6.0f,
-			dot * 3 / 6.0f,
-			dot * 5 / 6.0f,
-		};
-		uint8_t base = (vdot[0] >= nodes[0]) + (vdot[0] >= nodes[1]) +
-		               (vdot[0] >= nodes[2]);
-
-		std::array<uint8_t, 16> nearestNodes;
-		bool monotoneBlock = true;
-
-		for (int i = 0; i < 16; i++) {
-			nearestNodes[i] = (vdot[i] >= nodes[0]) + (vdot[i] >= nodes[1]) +
-			                  (vdot[i] >= nodes[2]);
-
-			monotoneBlock &= (base == nearestNodes[i]);
-		}
-
-		if (monotoneBlock) {
-			break;
-		}
+		dir[0] = max[0] - min[0];
+		dir[1] = max[1] - min[1];
+		dir[2] = max[2] - min[2];
 
 		std::array<uint8_t, 16> A1, A2;
 
-		for (int i = 0; i < 16; i++) {
-			A1[i] = 3 - nearestNodes[i];
+		auto indices = computeIndices__4nodes(min, max, values);
+		uint8_t base = indices[0];
+
+		bool monotone = true;
+		for (uint8_t index : indices) {
+			monotone &= (index == base);
 		}
-		A2 = nearestNodes;
+
+		if (monotone) break;
+
+		for (int i = 0; i < 16; i++) {
+			A1[i] = 3 - indices[i];
+		}
+		A2 = indices;
 
 		std::array<int32_t, 4> AtA = { 0, 0, 0, 0 };
 
@@ -187,11 +261,11 @@ EndpointsData<ColorType> computeEndpoints_4(const ColorType<16>& values) {
 				Atc[1] += A2[i] * values[c][i];
 			}
 
-			min[c][0] = std::clamp(
+			min[c] = std::clamp(
 				(AtA[3] * Atc[0] - AtA[1] * Atc[1]) * 3 / AtAdet, 0, 255
 			);
 
-			max[c][0] = std::clamp(
+			max[c] = std::clamp(
 				(-AtA[2] * Atc[0] + AtA[0] * Atc[1]) * 3 / AtAdet, 0, 255
 			);
 		}
@@ -200,83 +274,46 @@ EndpointsData<ColorType> computeEndpoints_4(const ColorType<16>& values) {
 	return { .min = min, .max = max, .alternativeMode = false };
 }
 
-template <template <size_t> typename ColorType>
-EndpointsData<ColorType> computeEndpoints_3(const ColorType<16>& values) {
-	ColorType<1> min, max;
-
-	std::uint32_t channelMin[ColorType<1>::channels()];
-	std::uint32_t channelMax[ColorType<1>::channels()];
-
-	for (int c = 0; c < ColorType<1>::channels(); c++) {
-		channelMin[c] = *std::min_element(values[c].begin(), values[c].end());
-		channelMax[c] = *std::max_element(values[c].begin(), values[c].end());
-	}
-
-	for (int c = 0; c < ColorType<1>::channels(); c++) {
-		min[c][0] = channelMin[c];
-		max[c][0] = channelMax[c];
-	}
-
-	return { .min = min, .max = max };
-};
-
-template <template <size_t> typename ColorType, typename BlockType>
-BlockType encodeBlock(const ColorType<16>& values) {
-	BlockType block;
+template <typename ColorBlock>
+BC1Block encodeBlock(const ColorBlock& values) {
+	BC1Block block;
 	bool alternativeMode = false;
-	EndpointsData<ColorType> endpointsData;
+	EndpointsData endpointsData;
 
-	if constexpr (ColorType<1>::channels() == 4) {
+	RGB8Block colorBlock;
+	colorBlock[0] = values[0];
+	colorBlock[1] = values[1];
+	colorBlock[2] = values[2];
+
+	if constexpr (std::is_same_v<RGBA8Block, ColorBlock>) {
 		for (int i = 0; i < 16; i++) {
 			alternativeMode |= values[3][i] < 128;
 		}
 
 		if (alternativeMode)
-			endpointsData = computeEndpoints_3<ColorType>(values);
+			endpointsData = computeEndpointsMinMax(colorBlock);
 		else
-			endpointsData = computeEndpoints_4<ColorType>(values);
+			endpointsData = computeEndpointsPCA(colorBlock);
 
 	} else
-		endpointsData = computeEndpoints_4<ColorType>(values);
+		endpointsData = computeEndpointsPCA(values);
 
 	auto [minEndpoint, maxEndpoint, mode] = endpointsData;
 
 	alternativeMode |= mode;
 
-	RGB565 minEncoded = static_cast<RGB565>(minEndpoint);
-	RGB565 maxEncoded = static_cast<RGB565>(maxEndpoint);
+	RGB565 minEncoded = rgb8_to_rgb565(minEndpoint);
+	RGB565 maxEncoded = rgb8_to_rgb565(maxEndpoint);
 
-	alternativeMode |= minEncoded.data == maxEncoded.data;
-
-	ColorType<1> dir = static_cast<ColorType<1>>(maxEncoded) -
-	                   static_cast<ColorType<1>>(minEncoded);
-
-	uint32_t dot = ColorType<1>::template dot<uint32_t>(dir, dir)[0];
-	ColorType<16> directions;
-
-	std::array<int, 16> vdot;
-	for (int i = 0; i < 16; i++) {
-		std::array<int, 3> offsetColor;
-		for (int c = 0; c < 3; c++) {
-			offsetColor[c] = values[c][i] - minEndpoint[c][0];
-		}
-		vdot[i] = offsetColor[0] * dir[0][0] + offsetColor[1] * dir[1][0] +
-		          offsetColor[2] * dir[2][0];
-	}
-	std::array<uint32_t, 16> indices;
-
+	alternativeMode |= minEncoded >= maxEncoded;
+	std::array<uint8_t, 16> indices;
 	if (alternativeMode) {
 		block.endpoints[0] = minEncoded;
 		block.endpoints[1] = maxEncoded;
+		const std::array<uint8_t, 4> indexMap = { 0, 2, 1 };
+		indices = computeIndices__3nodes(minEndpoint, maxEndpoint, colorBlock);
 
-		const std::uint32_t nodes[2] = { dot / 4, dot * 3 / 4 };
-
-		for (int i = 0; i < indices.size(); i++) {
-			indices[i] = (vdot[i] <= nodes[0]) + (vdot[i] <= nodes[1]);
-			indices[i] = (indices[i] + 1) % 3;
-		}
-
-		if constexpr (ColorType<1>::channels() == 4) {
+		if constexpr (std::is_same_v<RGBA8Block, ColorBlock>) {
 			for (int i = 0; i < 16; i++) {
 				if (values[3][i] < 128) {
 					indices[i] = 3;
@@ -294,16 +331,8 @@ BlockType encodeBlock(const ColorType<16>& values) {
 		block.endpoints[0] = maxEncoded;
 		block.endpoints[1] = minEncoded;
 
-		const float nodes[3] = {
-			dot / 6.0f,
-			dot * 3 / 6.0f,
-			dot * 5 / 6.0f,
-		};
-
+		indices = computeIndices__4nodes(minEndpoint, maxEndpoint, colorBlock);
 		for (int i = 0; i < indices.size(); i++) {
-			indices[i] = (vdot[i] >= nodes[0]) + (vdot[i] >= nodes[1]) +
-			             (vdot[i] >= nodes[2]);
-
 			indices[i] = (indices[i] + 1) % 4;
 		}
 	}
@@ -314,50 +343,67 @@ BlockType encodeBlock(const ColorType<16>& values) {
 	return block;
 }
 
-template <template <size_t> typename ColorType, typename BlockType>
-std::array<ColorType<1>, 16> decodeBlock(const BlockType& block) {
-	std::array<ColorType<1>, 4> values;
+template <typename ColorType>
+std::array<ColorType, 16> decodeBlock(const BC1Block& block) {
+	std::array<ColorType, 4> values;
+	RGB8 e0 = rgb565_to_rgb8(block.endpoints[0]);
+	RGB8 e1 = rgb565_to_rgb8(block.endpoints[1]);
 
-	values[0] = static_cast<ColorType<1>>(block.endpoints[0]);
-	values[1] = static_cast<ColorType<1>>(block.endpoints[1]);
+	values[0][0] = e0[0];
+	values[0][1] = e0[1];
+	values[0][2] = e0[2];
 
-	bool extendedMode = block.endpoints[0].data <= block.endpoints[1].data;
+	values[1][0] = e1[0];
+	values[1][1] = e1[1];
+	values[1][2] = e1[2];
+
+	bool extendedMode = block.endpoints[0] <= block.endpoints[1];
 
 	if (extendedMode) {
-		values[2] = (values[0] / 2 + values[1] / 2);
-		values[3] = ColorType<1>(0);
+		RGB8 v2 = lerp(e0, e1, 0.5f);
+		values[2][0] = v2[0];
+		values[2][1] = v2[1];
+		values[2][2] = v2[2];
+
+		values[3] = { 0 };
 	} else {
-		values[2] = ColorType<1>::lerp(values[0], values[1], (255 * 2 / 3));
-		values[3] = ColorType<1>::lerp(values[0], values[1], (255 / 3));
+		RGB8 v2 = lerp(e1, e0, 1.0 / 3.0);
+		values[2][0] = v2[0];
+		values[2][1] = v2[1];
+		values[2][2] = v2[2];
+		RGB8 v3 = lerp(e1, e0, 2.0 / 3.0);
+		values[3][0] = v3[0];
+		values[3][1] = v3[1];
+		values[3][2] = v3[2];
 	}
 
-	std::array<ColorType<1>, 16> res;
+	std::array<ColorType, 16> res;
 
 	for (int i = 0; i < res.size(); i++) {
 		std::uint_fast32_t index = (block.indices >> (i * 2)) & 0b11;
 
 		res[i] = values[index];
 
-		if constexpr (ColorType<1>::channels() == 4) {
+		if constexpr (std::is_same_v<ColorType, RGBA8>) {
 			if (extendedMode && index == 3) {
 				continue;
 			}
-			res[i][3][0] = 255;
+			res[i][3] = 255;
 		}
 	}
 
 	return res;
 }
 
-BC1BlockOpaque BC1BlockOpaque::encode(const RGB8Block& values) {
-	return encodeBlock<RGB8n, BC1BlockOpaque>(values);
+BC1Block BC1Block::encode(const RGB8Block& values) {
+	return encodeBlock(values);
 }
-std::array<RGB8, 16> BC1BlockOpaque::decode(const BC1BlockOpaque& block) {
-	return decodeBlock<RGB8n, BC1BlockOpaque>(block);
+std::array<RGB8, 16> BC1Block::decode(const BC1Block& block) {
+	return decodeBlock<RGB8>(block);
 }
 BC1BlockAlpha BC1BlockAlpha::encode(const RGBA8Block& values) {
-	return encodeBlock<RGBA8n, BC1BlockAlpha>(values);
+	return static_cast<BC1BlockAlpha>(encodeBlock(values));
 }
 std::array<RGBA8, 16> BC1BlockAlpha::decode(const BC1BlockAlpha& block) {
-	return decodeBlock<RGBA8n, BC1BlockAlpha>(block);
+	return decodeBlock<RGBA8>(static_cast<BC1Block>(block));
 }
