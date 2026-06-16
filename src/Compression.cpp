@@ -21,7 +21,9 @@ void compress(
 		int x = (b % blocksPerRow) * 4;
 		int y = (b / blocksPerRow) * 4;
 
-		ColorBlock<typename ColorType::value_type, std::tuple_size_v<ColorType>>
+		alignas(32) ColorBlock<
+			typename ColorType::value_type,
+			std::tuple_size_v<ColorType>>
 			values;
 		std::size_t baseIndex = x + y * width;
 

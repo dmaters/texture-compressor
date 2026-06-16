@@ -24,6 +24,9 @@ target_include_directories(
 
 
 option(TEXTURE_COMPRESSOR_BUILD_DEMO "Build demo" OFF)
+option(TEXTURE_COMPRESSOR_SIMD "Build with SIMD" ON)
+
+
 
 
 if(TEXTURE_COMPRESSOR_BUILD_DEMO)
@@ -35,15 +38,32 @@ endif()
 if(MSVC)
   target_compile_options(texture-compressor PRIVATE
     $<$<CONFIG:Release>:/O2>
-    $<$<CONFIG:Release>:/arch:AVX2>
     $<$<CONFIG:RelWithDebInfo>:/O2>
-    $<$<CONFIG:RelWithDebInfo>:/arch:AVX2>
   )
 else()
   target_compile_options(texture-compressor PRIVATE
-    $<$<CONFIG:Release>:-march=native>
     $<$<CONFIG:Release>:-O3>
-    $<$<CONFIG:RelWithDebInfo>:-march=native>
     $<$<CONFIG:RelWithDebInfo>:-O3>
   )
+endif()
+
+
+
+if(TEXTURE_COMPRESSOR_SIMD)
+  target_sources(texture-compressor PRIVATE src/BC1_comp_avx.cpp)
+
+  if(MSVC)
+    target_compile_options(texture-compressor PRIVATE
+      $<$<CONFIG:Release>:/arch:AVX2>
+      $<$<CONFIG:RelWithDebInfo>:/arch:AVX2>
+  )
+  else()
+    target_compile_options(texture-compressor PRIVATE
+      $<$<CONFIG:Release>:-march=native>
+      $<$<CONFIG:RelWithDebInfo>:-march=native>
+    )
+  endif()
+
+else()
+  target_sources(texture-compressor PRIVATE src/BC1_comp_base.cpp)
 endif()

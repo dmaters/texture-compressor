@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstdint>
 
+#include "BC1_comp.hpp"
 #include "ColorFormat.hpp"
 struct EndpointsData {
 	RGB8 min;
@@ -42,76 +43,6 @@ RGB8 lerp(RGB8 v1, RGB8 v2, float ratio) {
 
 uint32_t dot(RGB8 v1, RGB8 v2) {
 	return v1[0] * v2[0] + v1[1] * v2[1] + v1[2] * v2[2];
-}
-
-std::array<uint8_t, 16> computeIndices__4nodes(
-	const RGB8& min, const RGB8& max, const RGB8Block& values
-) {
-	std::array<int16_t, 3> dir;
-	dir[0] = max[0] - min[0];
-	dir[1] = max[1] - min[1];
-	dir[2] = max[2] - min[2];
-
-	uint32_t dirDot = dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2];
-
-	std::array<int, 16> vdot;
-	for (int i = 0; i < 16; i++) {
-		std::array<int, 3> offsetColor;
-		for (int c = 0; c < 3; c++) {
-			offsetColor[c] = values[c][i] - min[c];
-		}
-		vdot[i] = offsetColor[0] * dir[0] + offsetColor[1] * dir[1] +
-		          offsetColor[2] * dir[2];
-	}
-
-	const float nodes[3] = {
-		dirDot / 6.0f,
-		dirDot * 3 / 6.0f,
-		dirDot * 5 / 6.0f,
-	};
-
-	std::array<uint8_t, 16> nearestNodes;
-
-	for (int i = 0; i < 16; i++) {
-		nearestNodes[i] = (vdot[i] >= nodes[0]) + (vdot[i] >= nodes[1]) +
-		                  (vdot[i] >= nodes[2]);
-	}
-
-	return nearestNodes;
-}
-
-std::array<uint8_t, 16> computeIndices__3nodes(
-	const RGB8& min, const RGB8& max, const RGB8Block& values
-) {
-	std::array<int16_t, 3> dir;
-	dir[0] = max[0] - min[0];
-	dir[1] = max[1] - min[1];
-	dir[2] = max[2] - min[2];
-
-	uint32_t dirDot = dir[0] * dir[0] + dir[1] * dir[1] + dir[2] * dir[2];
-
-	std::array<int, 16> vdot;
-	for (int i = 0; i < 16; i++) {
-		std::array<int, 3> offsetColor;
-		for (int c = 0; c < 3; c++) {
-			offsetColor[c] = values[c][i] - min[c];
-		}
-		vdot[i] = offsetColor[0] * dir[0] + offsetColor[1] * dir[1] +
-		          offsetColor[2] * dir[2];
-	}
-
-	const float nodes[2] = {
-		dirDot / 3.0f,
-		dirDot * 2 / 3.0f,
-	};
-
-	std::array<uint8_t, 16> nearestNodes;
-
-	for (int i = 0; i < 16; i++) {
-		nearestNodes[i] = (vdot[i] <= nodes[0]) + (vdot[i] <= nodes[1]);
-	}
-
-	return nearestNodes;
 }
 
 EndpointsData computeEndpointsMinMax(const RGB8Block& values) {
@@ -226,9 +157,9 @@ EndpointsData computeEndpointsPCA(const RGB8Block& values) {
 		dir[1] = max[1] - min[1];
 		dir[2] = max[2] - min[2];
 
-		std::array<uint8_t, 16> A1, A2;
+		std::array<int8_t, 16> A1, A2;
 
-		auto indices = computeIndices__4nodes(min, max, values);
+		auto indices = computeIndices(min, max, values, 3);
 		uint8_t base = indices[0];
 
 		bool monotone = true;
@@ -306,12 +237,12 @@ BC1Block encodeBlock(const ColorBlock& values) {
 	RGB565 maxEncoded = rgb8_to_rgb565(maxEndpoint);
 
 	alternativeMode |= minEncoded >= maxEncoded;
-	std::array<uint8_t, 16> indices;
+	std::array<int8_t, 16> indices;
 	if (alternativeMode) {
 		block.endpoints[0] = minEncoded;
 		block.endpoints[1] = maxEncoded;
 		const std::array<uint8_t, 4> indexMap = { 0, 2, 1 };
-		indices = computeIndices__3nodes(minEndpoint, maxEndpoint, colorBlock);
+		indices = computeIndices(minEndpoint, maxEndpoint, colorBlock, 2);
 
 		if constexpr (std::is_same_v<RGBA8Block, ColorBlock>) {
 			for (int i = 0; i < 16; i++) {
@@ -331,7 +262,7 @@ BC1Block encodeBlock(const ColorBlock& values) {
 		block.endpoints[0] = maxEncoded;
 		block.endpoints[1] = minEncoded;
 
-		indices = computeIndices__4nodes(minEndpoint, maxEndpoint, colorBlock);
+		indices = computeIndices(minEndpoint, maxEndpoint, colorBlock, 3);
 		for (int i = 0; i < indices.size(); i++) {
 			indices[i] = (indices[i] + 1) % 4;
 		}
