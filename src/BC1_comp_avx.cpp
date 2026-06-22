@@ -1,4 +1,6 @@
 #include <immintrin.h>
+#include <emmintrin.h>
+
 
 #include <algorithm>
 #include <cmath>
@@ -23,7 +25,7 @@ std::array<int8_t, 16> computeIndices(
 
 	for (int i = 0; i < 3; i++) {
 		__m256i packedValues =
-			_mm256_cvtepu8_epi16(_mm_loadu_si128((__m128i_u*)values[i].data()));
+			_mm256_cvtepu8_epi16(_mm_loadu_si128((__m128i*)values[i].data()));
 
 		__m256i cmin = _mm256_set1_epi16(min[i]);
 		__m256i localDir = _mm256_sub_epi16(packedValues, cmin);
@@ -188,10 +190,10 @@ EndpointsData computeEndpointsPCA(const RGB8Block& values) {
 	if (baseDir[0] + baseDir[1] + baseDir[2] == 0)
 		return { .min = min, .max = max, .alternativeMode = true };
 
-	__m128i_u packedValues[3] = {
-		_mm_load_si128((__m128i_u*)values[0].data()),
-		_mm_load_si128((__m128i_u*)values[1].data()),
-		_mm_load_si128((__m128i_u*)values[2].data()),
+	__m128i packedValues[3] = {
+		_mm_load_si128((__m128i*)values[0].data()),
+		_mm_load_si128((__m128i*)values[1].data()),
+		_mm_load_si128((__m128i*)values[2].data()),
 	};
 
 	int16_t C[9] = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };

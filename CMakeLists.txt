@@ -30,6 +30,7 @@ option(TEXTURE_COMPRESSOR_CUSTOM_AVX2 "Build with custom AVX2 implementation" ON
 
 
 
+set(TEXTURE_COMPRESSOR_BUILD_DEMO ON)
 
 if(TEXTURE_COMPRESSOR_BUILD_DEMO)
     add_subdirectory(demo)
@@ -55,7 +56,7 @@ if(TEXTURE_COMPRESSOR_CUSTOM_AVX2)
   target_sources(texture-compressor PRIVATE src/BC1_comp_avx.cpp)
 
   if(MSVC)
-    target_compile_options(texture-compressor PRIVATE /arch:AVX2)
+    target_compile_options(texture-compressor PRIVATE /arch:AVX2 /arch:SSE2)
   else()
     target_compile_options(texture-compressor PRIVATE -march=native -mavx2)
   endif()
