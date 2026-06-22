@@ -10,6 +10,7 @@ add_library(texture-compressor
     src/Compression.cpp
     src/Decompression.cpp
     src/BC1.cpp
+    src/BC1_comp.cpp
     src/BC4.cpp
     src/BC5.cpp
     src/Utils.cpp
@@ -25,6 +26,8 @@ target_include_directories(
 
 option(TEXTURE_COMPRESSOR_BUILD_DEMO "Build demo" OFF)
 option(TEXTURE_COMPRESSOR_SIMD "Build with SIMD" ON)
+option(TEXTURE_COMPRESSOR_CUSTOM_AVX2 "Build with custom AVX2 implementation" ON)
+
 
 
 
@@ -42,8 +45,8 @@ if(MSVC)
   )
 else()
   target_compile_options(texture-compressor PRIVATE
-    $<$<CONFIG:Release>:-O3>
-    $<$<CONFIG:RelWithDebInfo>:-O3>
+    $<$<CONFIG:Release>:-O3 -march=native>
+    $<$<CONFIG:RelWithDebInfo>:-O3 -march=native>
   )
 endif()
 
