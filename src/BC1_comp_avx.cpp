@@ -5,7 +5,7 @@
 
 #include "BC1_comp.hpp"
 
-__attribute__((target("avx2"))) std::array<int8_t, 16> computeIndices(
+std::array<int8_t, 16> computeIndices(
 	const RGB8& min,
 	const RGB8& max,
 	const RGB8Block& values,
@@ -97,7 +97,7 @@ struct ComputeIndicesData {
 	__m256i indices;
 	bool allEq;
 };
-__attribute__((target("avx2"))) ComputeIndicesData computeIndices_reduced(
+ComputeIndicesData computeIndices_reduced(
 	const __m256i values[3], const std::array<int16_t, 3>& dir
 ) {
 	__m256i packedDotValuesLow = _mm256_setzero_si256();
@@ -164,7 +164,7 @@ __attribute__((target("avx2"))) ComputeIndicesData computeIndices_reduced(
 	return { indices, comparisonTest == 6 };
 }
 
-__attribute__((target("avx2"))) inline int32_t hadd_collapse(__m256i values) {
+inline int32_t hadd_collapse(__m256i values) {
 	__m128i low = _mm256_castsi256_si128(values);
 	__m128i high = _mm256_extracti128_si256(values, 1);
 	__m128i sum = _mm_add_epi32(low, high);
@@ -177,8 +177,7 @@ __attribute__((target("avx2"))) inline int32_t hadd_collapse(__m256i values) {
 
 // stb_dxt inspired, we find the best fit axis, then we project and use
 // least square method to refine the endpoints
-__attribute__((target("avx2"))) EndpointsData
-computeEndpointsPCA(const RGB8Block& values) {
+EndpointsData computeEndpointsPCA(const RGB8Block& values) {
 	auto [min, max, _] = computeEndpointsMinMax(values);
 
 	RGB8 baseDir;
