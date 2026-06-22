@@ -1,6 +1,4 @@
 #include <immintrin.h>
-#include <emmintrin.h>
-
 
 #include <algorithm>
 #include <cmath>

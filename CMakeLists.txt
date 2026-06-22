@@ -30,7 +30,6 @@ option(TEXTURE_COMPRESSOR_CUSTOM_AVX2 "Build with custom AVX2 implementation" ON
 
 
 
-set(TEXTURE_COMPRESSOR_BUILD_DEMO ON)
 
 if(TEXTURE_COMPRESSOR_BUILD_DEMO)
     add_subdirectory(demo)
